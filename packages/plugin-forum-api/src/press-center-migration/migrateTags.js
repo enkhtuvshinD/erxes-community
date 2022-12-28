@@ -97,15 +97,6 @@ async function migrateTags() {
 
   const tagsByExternalId = await getTagsByExternalId();
 
-  qtChildren.forEach((qt) => {
-    const parentExternalId = qt.parent["external-id"];
-    const parent = tagsByExternalId[qt.parent["external-id"]];
-
-    if (!parent) {
-      console.log(parentExternalId);
-    }
-  });
-
   const children = qtChildren
     .map((qt) => {
       const parentExternalId = qt.parent["external-id"];
