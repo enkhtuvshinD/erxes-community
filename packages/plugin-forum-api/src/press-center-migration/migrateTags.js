@@ -72,9 +72,8 @@ async function migrateTags() {
 
   const allExternalIds = qtSections.map((s) => String(s["external-id"]));
 
-  const Col = Tags();
 
-  await Col.deleteMany({ externalId: { $in: allExternalIds } });
+  await Tags().deleteMany({ externalId: { $in: allExternalIds } });
 
   const qtParents = qtSections.filter((tag) => !tag.parent || !tag.parent["external-id"]);
   const qtChildren = qtSections.filter((tag) => tag.parent && tag.parent["external-id"]);
@@ -93,7 +92,7 @@ async function migrateTags() {
     __v: 0,
   }));
 
-  await Col.insertMany(parents);
+  await Tags().insertMany(parents);
 
   const tagsByExternalId = await getTagsByExternalId();
 
@@ -121,7 +120,7 @@ async function migrateTags() {
     })
     .filter(Boolean);
 
-  await Col.insertMany(children);
+  await Tags().insertMany(children);
 
   await disconnect();
 }

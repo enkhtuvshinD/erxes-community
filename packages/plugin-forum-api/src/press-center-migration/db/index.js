@@ -15,11 +15,17 @@ const dbName = "erxes";
 
 let db;
 let _Tags;
+let _Customers;
+let _Companies;
+let _ClientPortalUsers;
 
 async function connect() {
     await client.connect();
     db = client.db(dbName);
     _Tags = db.collection("tags");
+    _Customers = db.collection("customers");
+    _Companies = db.collection("companies");
+    _ClientPortalUsers = db.collection("client_portal_users");
 }
 
 async function disconnect() {
@@ -30,8 +36,23 @@ function Tags() {
     return _Tags;
 }
 
+function Customers() {
+    return _Customers;
+}
+
+function Companies() {
+    return _Companies;
+}
+
+function ClientPortalUsers() {
+    return _ClientPortalUsers;
+}
+
 module.exports = {
     connect,
     disconnect,
     Tags,
+    Customers,
+    Companies,
+    ClientPortalUsers,
 }
