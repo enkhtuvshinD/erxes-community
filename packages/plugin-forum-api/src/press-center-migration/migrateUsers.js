@@ -63,6 +63,10 @@ const handleContacts = async (
       throw new Error("User already exists");
     }
 
+    const sameUsername = await ClientPortalUsers().countDocuments({
+      username,
+    });
+
     user = await ClientPortalUsers().insertOne({
       _id: Random.id(),
       type,
@@ -75,7 +79,7 @@ const handleContacts = async (
         configs: [],
       },
       email,
-      username,
+      username: sameUsername ? `${username}2` : username,
       clientPortalId,
       password: "$2a$10$q.BdF/MeRs9Dy2M0o4VjlOLZ/Qx2P7pPXhMiiampvlp3oMdQvypV6",
       createdAt: new Date(),
@@ -120,7 +124,7 @@ const handleContacts = async (
   }
 
   if (type === "company") {
-    let company = await Companies.findOne({
+    let company = await Companies().findOne({
       $or: [{ emails: { $in: [email] } }, { primaryEmail: email }],
     });
 
@@ -128,7 +132,7 @@ const handleContacts = async (
       qry = { erxesCompanyId: company._id, clientPortalId };
     }
 
-    user = await ClientPortalUsers.findOne(qry);
+    user = await ClientPortalUsers().findOne(qry);
 
     if (user) {
       throw new Error("User already exists");
@@ -223,6 +227,9 @@ const migrateUsers = async () => {
   await ClientPortalUsers().deleteMany({ externalId: { $in: allExternalIds } });
 
   for (const author of authors) {
+    if (author.mergeInto) {
+      continue;
+    }
     await handleContacts(
       CLIENT_PORTAL_ID,
       author.email,
