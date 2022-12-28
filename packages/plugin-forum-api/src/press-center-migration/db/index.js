@@ -37,6 +37,7 @@ function Tags() {
 }
 
 function Customers() {
+    console.log(_Customers)
     return _Customers;
 }
 

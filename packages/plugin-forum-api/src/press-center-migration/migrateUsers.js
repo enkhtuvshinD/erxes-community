@@ -1,6 +1,40 @@
 "use strict";
 
 const Random = require("meteor-random");
+const dotenv = require("dotenv");
+dotenv.config();
+const fs = require("fs");
+const path = require("path");
+
+const {
+  connect,
+  disconnect,
+  Customers,
+  Companies,
+  ClientPortalUsers,
+} = require("./db/index.js");
+const randomColorCode = require("./randomColorCode");
+const additionalInfoById = require("./additionalAuthorInfo");
+
+const { MIG_DATA_DIR, CLIENT_PORTAL_ID } = process.env;
+
+function readAllUsersFromFile() {
+  const filePath = path.join(MIG_DATA_DIR, "authors-00001.txt");
+  const fileContents = fs.readFileSync(filePath, "utf-8");
+  const authors = fileContents
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      const author = JSON.parse(line);
+      const { company, mergeInto } = additionalInfoById[author["external-id"]];
+
+      author.type = company ? "company" : "customer";
+      author.mergeInto = mergeInto;
+      return author;
+    });
+
+  return authors;
+}
 
 const handleContacts = async (
   clientPortalId,
@@ -15,7 +49,7 @@ const handleContacts = async (
   qry = { email, clientPortalId };
 
   if (type === "customer") {
-    let customer = await Customers.findOne({
+    let customer = await Customers().findOne({
       $or: [{ emails: { $in: [email] } }, { primaryEmail: email }],
     });
 
@@ -23,13 +57,13 @@ const handleContacts = async (
       qry = { erxesCustomerId: customer._id, clientPortalId };
     }
 
-    user = await ClientPortalUsers.findOne(qry);
+    user = await ClientPortalUsers().findOne(qry);
 
     if (user) {
       throw new Error("User already exists");
     }
 
-    user = await ClientPortalUsers.insertOne({
+    user = await ClientPortalUsers().insertOne({
       _id: Random.id(),
       type,
       isPhoneVerified: false,
@@ -52,7 +86,7 @@ const handleContacts = async (
       externalId: String(externalId),
     });
 
-    customer = await Customers.insertOne({
+    customer = await Customers().insertOne({
       _id: Random.id(),
       state: "lead",
       sex: 0,
@@ -79,7 +113,7 @@ const handleContacts = async (
       __v: 0,
     });
 
-    await models.ClientPortalUsers.updateOne(
+    await ClientPortalUsers().updateOne(
       { _id: user._id },
       { $set: { erxesCustomerId: customer._id } }
     );
@@ -100,7 +134,7 @@ const handleContacts = async (
       throw new Error("User already exists");
     }
 
-    user = ClientPortalUsers.insertOne({
+    user = ClientPortalUsers().insertOne({
       _id: Random.id(),
       type,
       isPhoneVerified: false,
@@ -123,7 +157,7 @@ const handleContacts = async (
       externalId: String(externalId),
     });
 
-    company = Companies.insertOne({
+    company = Companies().insertOne({
       _id: Random.id(),
       names: [username],
       primaryName: username,
@@ -145,7 +179,7 @@ const handleContacts = async (
       externalId: String(externalId),
     });
 
-    await models.ClientPortalUsers.updateOne(
+    await ClientPortalUsers().updateOne(
       { _id: user._id },
       { $set: { erxesCompanyId: company._id } }
     );
@@ -153,3 +187,52 @@ const handleContacts = async (
 
   return user;
 };
+
+const example1 = {
+  "external-id": "1629349",
+  name: "Г. Галбадрах",
+  username: "Г. Галбадрах",
+  email: "gala_mn@yahoo.com",
+  type: "customer",
+  mergeInto: "",
+  metadata: { id: 1629349 },
+};
+
+const example2 = {
+  "external-id": "1625108",
+  name: "Б. Хатанбаатар",
+  username: "Б. Хатанбаатар",
+  email: "b.hatnaa02@gmail.com",
+  type: "company",
+  mergeInto: "",
+  metadata: {
+    id: 1625108,
+    "contributor-role": { id: 4390, name: "Author", type: "system" },
+  },
+};
+
+const migrateUsers = async () => {
+  const authors = readAllUsersFromFile();
+
+  await connect();
+
+  const allExternalIds = authors.map((a) => String(a["external-id"]));
+
+  await Customers().deleteMany({ externalId: { $in: allExternalIds } });
+  await Companies().deleteMany({ externalId: { $in: allExternalIds } });
+  await ClientPortalUsers().deleteMany({ externalId: { $in: allExternalIds } });
+
+  for (const author of authors) {
+    await handleContacts(
+      CLIENT_PORTAL_ID,
+      author.email,
+      author.type,
+      author.username,
+      author["external-id"]
+    );
+  }
+
+  await disconnect();
+};
+
+module.exports = migrateUsers;
