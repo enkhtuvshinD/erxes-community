@@ -18,6 +18,7 @@ let _Tags;
 let _Customers;
 let _Companies;
 let _ClientPortalUsers;
+let _ForumPermissionGroupUsers;
 
 async function connect() {
     await client.connect();
@@ -26,6 +27,7 @@ async function connect() {
     _Customers = db.collection("customers");
     _Companies = db.collection("companies");
     _ClientPortalUsers = db.collection("client_portal_users");
+    _ForumPermissionGroupUsers = db.collection("forum_permission_group_users");
 }
 
 async function disconnect() {
@@ -37,7 +39,6 @@ function Tags() {
 }
 
 function Customers() {
-    console.log(_Customers)
     return _Customers;
 }
 
@@ -49,6 +50,10 @@ function ClientPortalUsers() {
     return _ClientPortalUsers;
 }
 
+function ForumPermissionGroupUsers() {
+    return _ForumPermissionGroupUsers;
+}
+
 module.exports = {
     connect,
     disconnect,
@@ -56,4 +61,5 @@ module.exports = {
     Customers,
     Companies,
     ClientPortalUsers,
+    ForumPermissionGroupUsers,
 }

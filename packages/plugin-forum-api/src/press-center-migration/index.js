@@ -10,12 +10,6 @@ const { MIG_DATA_DIR } = process.env;
 async function main() {
     await connect();
 
-    const tags = await Tags().find({}).toArray();
-
-    console.log(tags);
-
-    console.log(randomColorCode());
-
     await disconnect();
 }
 

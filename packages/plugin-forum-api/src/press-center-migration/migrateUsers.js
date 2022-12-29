@@ -12,11 +12,17 @@ const {
   Customers,
   Companies,
   ClientPortalUsers,
+  ForumPermissionGroupUsers,
 } = require("./db/index.js");
 const randomColorCode = require("./randomColorCode");
 const additionalInfoById = require("./additionalAuthorInfo");
+const { ObjectId } = require("mongodb");
 
-const { MIG_DATA_DIR, CLIENT_PORTAL_ID } = process.env;
+const {
+  MIG_DATA_DIR,
+  CLIENT_PORTAL_ID,
+  CONTRIBUTOR_PERMISSION_GROUP_ID,
+} = process.env;
 
 function readAllUsersFromFile() {
   const filePath = path.join(MIG_DATA_DIR, "authors-00001.txt");
@@ -87,7 +93,7 @@ const handleContacts = async (
       isOnline: false,
       lastSeenAt: null,
       sessionCount: 0,
-      externalId: String(externalId),
+      externalId,
     });
 
     customer = await Customers().insertOne({
@@ -158,7 +164,7 @@ const handleContacts = async (
       isOnline: false,
       lastSeenAt: null,
       sessionCount: 0,
-      externalId: String(externalId),
+      externalId,
     });
 
     company = Companies().insertOne({
@@ -180,7 +186,7 @@ const handleContacts = async (
       modifiedAt: new Date(),
       searchText: `${username} ${email}`,
       __v: 0,
-      externalId: String(externalId),
+      externalId,
     });
 
     await ClientPortalUsers().updateOne(
@@ -224,10 +230,23 @@ const migrateUsers = async () => {
 
   await Customers().deleteMany({ externalId: { $in: allExternalIds } });
   await Companies().deleteMany({ externalId: { $in: allExternalIds } });
+
+  const usersToDelete = await ClientPortalUsers().find({ externalId: { $in: allExternalIds } }).toArray();
   await ClientPortalUsers().deleteMany({ externalId: { $in: allExternalIds } });
 
+  await ForumPermissionGroupUsers().deleteMany({ userId : { $in : usersToDelete.map(u => u._id) }});
+
+  const authorsToMerge = [];
+
+  const contributorsExternalIds = [];
+
   for (const author of authors) {
+    if (author.metadata["contributor-role"]?.id === 4390) {
+      contributorsExternalIds.push(String(author["external-id"]));
+    }
+
     if (author.mergeInto) {
+      authorsToMerge.push(author);
       continue;
     }
     await handleContacts(
@@ -235,8 +254,33 @@ const migrateUsers = async () => {
       author.email,
       author.type,
       author.username,
-      author["external-id"]
+      [String(author["external-id"])]
     );
+  }
+
+  await handleContacts(
+    CLIENT_PORTAL_ID,
+    "admin@presscenter.mn",
+    "company",
+    "Пресс Центр",
+    authorsToMerge.map((a) => String(a["external-id"]))
+  );
+
+  const contributors = await ClientPortalUsers()
+    .find({
+      externalId: { $in: contributorsExternalIds },
+    })
+    .toArray();
+
+  const permissionGroupId = ObjectId(CONTRIBUTOR_PERMISSION_GROUP_ID);
+
+  for (const contributor of contributors) {
+    const doc = {
+      userId: contributor._id,
+      permissionGroupId,
+    };
+
+    await ForumPermissionGroupUsers().updateOne(doc, { $set : doc }, { upsert: true });
   }
 
   await disconnect();

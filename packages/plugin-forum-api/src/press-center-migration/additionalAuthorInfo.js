@@ -711,7 +711,7 @@ const infoById = {
     username: "Пресс Центр",
     email: "dondolgereltsetseg55@gmail.com",
     company: 1,
-    mergeInto: "",
+    mergeInto: "admin@presscenter.mn",
   },
   "1624127": {
     id: 1624127,
