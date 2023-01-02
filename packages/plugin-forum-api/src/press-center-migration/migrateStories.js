@@ -96,7 +96,18 @@ async function readAllStoriesFromFile() {
         const story = JSON.parse(line);
         if (!externalIdToContent[story["external-id"]]) return;
 
-        story.content = externalIdToContent[story["external-id"]];
+        let content = externalIdToContent[story["external-id"]];
+
+        const reg = /https?:\/\/gumlet.assettype.com/g;
+        const target = "https://apex-sync-test.s3.us-west-2.amazonaws.com";
+
+        content = content.replace(reg, target);
+
+        story.content = content;
+
+        if(story["temporary-hero-image-url"]) {
+          story["temporary-hero-image-url"] = story["temporary-hero-image-url"].replace(reg, target);
+        }
 
         const tagIds = story.sections.map(
           (section) => externalIdToTagId[section["external-id"]]
