@@ -129,8 +129,6 @@ async function main() {
   const posts = stories.map((story) => {
     const lastPublishedAt = new Date(story["last-published-at"]);
 
-    console.log(story["temporary-hero-image-url"]);
-
     return {
       state: "PUBLISHED",
       viewCount: 0,
@@ -138,6 +136,7 @@ async function main() {
       tagIds: story.tagIds,
       categoryId: story.categoryId,
       title: story.headline,
+      subTitle: story.subheadline,
       content: story.content,
       categoryApprovalState: "APPROVED",
       createdUserType: "CP",
@@ -150,6 +149,8 @@ async function main() {
       updatedAt: lastPublishedAt,
       externalId: String(story["external-id"]),
       thumbnail: story["temporary-hero-image-url"],
+      thumbnailAlt: story["hero-image-caption"],
+      description: story.summary,
       __v: 0,
     };
   });
