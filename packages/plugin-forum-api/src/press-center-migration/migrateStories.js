@@ -14,6 +14,8 @@ const {
   ClientPortalUsers,
   ForumPermissionGroupUsers,
   Tags,
+  Categories,
+  Posts,
 } = require("./db/index.js");
 const randomColorCode = require("./randomColorCode");
 const { ObjectId } = require("mongodb");
@@ -62,14 +64,26 @@ async function getExternalId2Tagid() {
   return externalIdToTagId;
 }
 
+async function getCategoryCode2Id() {
+  const categories = await Categories()
+    .find({})
+    .toArray();
+
+  const categoriesByCode = {};
+  categories.forEach((category) => {
+    if (category.code) categoriesByCode[category.code] = category._id;
+  });
+
+  return categoriesByCode;
+}
+
 async function readAllStoriesFromFile() {
   const stories = [];
 
   const externalIdToContent = readExternalIdToContent();
   const externalIdToCPUserId = await getExternalId2Cpuid();
   const externalIdToTagId = await getExternalId2Tagid();
-
-  console.log(externalIdToTagId);
+  const categoryCode2Id = await getCategoryCode2Id();
 
   for (let i = 1; i <= 5; i++) {
     const filePath = path.join(MIG_DATA_DIR, `story-presscenter-0000${i}.txt`);
@@ -89,12 +103,15 @@ async function readAllStoriesFromFile() {
         );
         story.tagIds = tagIds;
 
-        story.categoryCode = sectionCategory[story.sections[0]["external-id"]].erxesCategory;
+        story.categoryCode =
+          sectionCategory[story.sections[0]["external-id"]].erxesCategory;
 
-        story.createdByCpId = externalIdToCPUserId[story.authors[0]["external-id"]];
+        story.categoryId = categoryCode2Id[story.categoryCode];
+
+        story.createdByCpId =
+          externalIdToCPUserId[story.authors[0]["external-id"]];
 
         stories.push(story);
-        console.log(story.categoryCode);
       });
   }
   return stories;
@@ -104,6 +121,41 @@ async function main() {
   await connect();
 
   const stories = await readAllStoriesFromFile();
+
+  const allExternalIds = stories.map((story) => String(story["external-id"]));
+
+  await Posts().deleteMany({ externalId: { $in: allExternalIds } });
+
+  const posts = stories.map((story) => {
+    const lastPublishedAt = new Date(story["last-published-at"]);
+
+    console.log(story["temporary-hero-image-url"]);
+
+    return {
+      state: "PUBLISHED",
+      viewCount: 0,
+      trendScore: 0,
+      tagIds: story.tagIds,
+      categoryId: story.categoryId,
+      title: story.headline,
+      content: story.content,
+      categoryApprovalState: "APPROVED",
+      createdUserType: "CP",
+      createdByCpId: story.createdByCpId,
+      updatedUserType: "CP",
+      updatedByCpId: story.updatedByCpId,
+      lastPublishedAt,
+      translations: [],
+      createdAt: lastPublishedAt,
+      updatedAt: lastPublishedAt,
+      externalId: String(story["external-id"]),
+      thumbnail: story["temporary-hero-image-url"],
+      __v: 0,
+    };
+  });
+
+  await Posts().insertMany(posts);
+
   await disconnect();
 }
 
