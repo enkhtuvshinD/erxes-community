@@ -161,7 +161,7 @@ async function main() {
       externalId: String(story["external-id"]),
       thumbnail: story["temporary-hero-image-url"],
       thumbnailAlt: story["hero-image-caption"],
-      description: story.summary,
+      description: story.subheadline,
       __v: 0,
     };
   });
