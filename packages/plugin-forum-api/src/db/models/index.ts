@@ -27,6 +27,7 @@ import { generateFollowTagModel, IFollowTagModel } from './followTag';
 import { generateSavedPostModel, SavedPostModel } from './savepost';
 import { generatePollOptionModel, PollOptionModel } from './pollOption';
 import { generatePollVoteModel, PollVoteModel } from './pollVote';
+import { QuizChoiceModel, QuizModel, QuizQuestionModel } from './quiz';
 
 export interface IModels {
   Category: ICategoryModel;
@@ -48,6 +49,9 @@ export interface IModels {
   SavedPost: SavedPostModel;
   PollOption: PollOptionModel;
   PollVote: PollVoteModel;
+  Quiz: QuizModel;
+  QuizQuestion: QuizQuestionModel;
+  QuizChoice: QuizChoiceModel;
 }
 
 export let models: IModels | null = null;
