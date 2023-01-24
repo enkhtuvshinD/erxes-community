@@ -1,4 +1,4 @@
-import { IUserDocument } from '@erxes/api-utils/src/types';
+import { IUser, IUserDocument } from '@erxes/api-utils/src/types';
 import { Document, Schema, Model, Connection, Types } from 'mongoose';
 import {
   USER_TYPES,
@@ -14,6 +14,7 @@ import {
   LoginRequiredError
 } from '../../customErrors';
 import { notifyUsersPublishedPost } from './utils';
+import * as strip from 'strip';
 
 export const POST_STATES = ['DRAFT', 'PUBLISHED'] as const;
 
@@ -67,6 +68,15 @@ export interface IPost extends CommonPostFields {
 
   requiredLevel?: string | null;
   isPermissionRequired?: boolean | null;
+
+  wordCount?: number | null;
+  isPollMultiChoice?: boolean | null;
+
+  isFeaturedByAdmin?: boolean | null;
+  isFeaturedByUser?: boolean | null;
+
+  commentCount?: number | null;
+  pollEndDate?: Date | null;
 }
 
 export type PostDocument = IPost & Document;
@@ -92,14 +102,31 @@ const OMIT_FROM_INPUT = [
   'lastPublishedAt',
 
   'requiredLevel',
-  'isPermissionRequired'
+  'isPermissionRequired',
+  'commentCount'
 ] as const;
 
-export type PostCreateInput = Omit<IPost, typeof OMIT_FROM_INPUT[number]>;
+interface PollOptionInput {
+  _id?: string;
+  title: string;
+  order: number;
+}
+
+export type PostCreateInput = Omit<IPost, typeof OMIT_FROM_INPUT[number]> & {
+  pollOptions?: PollOptionInput[] | null;
+};
+
 export type PostPatchInput = Partial<PostCreateInput>;
 
 export interface IPostModel extends Model<PostDocument> {
   findByIdOrThrow(_id: string): Promise<PostDocument>;
+
+  setFeaturedByAdmin(_id: string, isFeatured: boolean): Promise<boolean>;
+  setFeaturedByUser(
+    _id: string,
+    isFeatured: boolean,
+    cpUser?: ICpUser | null
+  ): Promise<boolean>;
 
   createPost(c: PostCreateInput, user: IUserDocument): Promise<PostDocument>;
   patchPost(
@@ -107,7 +134,7 @@ export interface IPostModel extends Model<PostDocument> {
     c: PostPatchInput,
     user: IUserDocument
   ): Promise<PostDocument>;
-  deletePost(_id: string): Promise<PostDocument>;
+  deletePost(_id: string, user: IUserDocument): Promise<PostDocument>;
 
   changeState(
     _id: string,
@@ -211,11 +238,18 @@ export const postSchema = new Schema<PostDocument>({
   updatedById: String,
   updatedByCpId: String,
 
-  lastPublishedAt: { type: Date, idnex: true, sparse: true },
+  lastPublishedAt: { type: Date, index: true, sparse: true },
 
   customIndexed: Schema.Types.Mixed,
 
-  tagIds: [String]
+  tagIds: [String],
+  wordCount: Number,
+  isPollMultiChoice: Boolean,
+  pollEndDate: Date,
+
+  isFeaturedByAdmin: { type: Boolean, index: true, sparse: true },
+  isFeaturedByUser: { type: Boolean, index: true, sparse: true },
+  commentCount: { type: Number, default: 0, index: true }
 });
 // used by client portal front-end
 postSchema.index({ state: 1, categoryApprovalState: 1, categoryId: 1 });
@@ -231,6 +265,23 @@ postSchema.index({
   'translations.title': 'text'
 });
 
+const wordCountHtml = (html?: string | null): number => {
+  if (!html) return 0;
+  const text = strip(html || '');
+  return text.trim().split(/\s+/).length;
+};
+async function cleanupAfterDelete(
+  models: IModels,
+  _id: string,
+  userType: UserTypes,
+  userId: string
+) {
+  await models.Comment.deleteMany({ postId: _id });
+  await models.PostUpVote.deleteMany({ contentId: _id });
+  await models.PostDownVote.deleteMany({ contentId: _id });
+  await models.PollOption.handleChanges(_id, [], userType, userId);
+}
+
 export const generatePostModel = (
   subdomain: string,
   con: Connection,
@@ -244,6 +295,46 @@ export const generatePostModel = (
       }
       return post;
     }
+
+    public static async setFeaturedByAdmin(
+      _id: string,
+      isFeatured: boolean
+    ): Promise<boolean> {
+      let update: any;
+      if (isFeatured) {
+        update = { isFeaturedByAdmin: isFeatured };
+      } else {
+        update = { $unset: { isFeaturedByAdmin: 1 } };
+      }
+      const post = await models.Post.findByIdAndUpdate(_id, update, {
+        new: true
+      });
+      return !!post;
+    }
+    public static async setFeaturedByUser(
+      _id: string,
+      isFeatured: boolean,
+      cpUser?: ICpUser | null
+    ): Promise<boolean> {
+      if (!cpUser) throw new LoginRequiredError();
+
+      let update: any;
+
+      if (isFeatured) {
+        update = { isFeaturedByUser: isFeatured };
+      } else {
+        update = { $unset: { isFeaturedByUser: 1 } };
+      }
+
+      const post = await models.Post.findOneAndUpdate(
+        { _id, createdByCpId: cpUser.userId },
+        update,
+        { new: true }
+      );
+
+      return !!post;
+    }
+
     public static async createPost(
       input: PostCreateInput,
       user: IUserDocument
@@ -251,10 +342,12 @@ export const generatePostModel = (
       // admin posts are always approved
       const categoryApprovalState: AdminApprovalStates = 'APPROVED';
 
-      let lastPublishedAt = input.state === 'PUBLISHED' ? new Date() : null;
+      const { pollOptions, ...doc } = input;
+
+      let lastPublishedAt = doc.state === 'PUBLISHED' ? new Date() : null;
 
       const res = await models.Post.create({
-        ...input,
+        ...doc,
 
         categoryApprovalState,
 
@@ -264,8 +357,19 @@ export const generatePostModel = (
         updatedUserType: USER_TYPES[0],
         updatedById: user._id,
 
-        lastPublishedAt
+        lastPublishedAt,
+        wordCount: wordCountHtml(input.content)
       });
+
+      if (pollOptions?.length) {
+        await models.PollOption.handleChanges(
+          res._id,
+          pollOptions.map(({ title, order }) => ({ title, order })),
+          'CP',
+          user._id
+        );
+      }
+
       if (res.state === 'PUBLISHED') {
         await notifyUsersPublishedPost(subdomain, models, res);
       }
@@ -273,10 +377,12 @@ export const generatePostModel = (
     }
     public static async patchPost(
       _id: string,
-      patch: PostPatchInput,
+      input: PostPatchInput,
       user: IUserDocument
     ): Promise<PostDocument> {
       const post = await models.Post.findByIdOrThrow(_id);
+
+      const { pollOptions, ...patch } = input;
 
       const originalState = post.state;
 
@@ -287,19 +393,27 @@ export const generatePostModel = (
         updatedAt: new Date()
       };
 
+      if (update.content) {
+        update.wordCount = wordCountHtml(update.content);
+      }
+
       if (originalState === 'DRAFT' && patch.state === 'PUBLISHED') {
         update.lastPublishedAt = new Date();
         update.viewCount = 0;
       }
 
-      _.assign(post, {
-        ...patch,
-        updatedUserType: USER_TYPES[0],
-        updatedById: user._id,
-        updatedAt: new Date()
-      });
+      _.assign(post, update);
 
       await post.save();
+
+      if (pollOptions !== undefined) {
+        await models.PollOption.handleChanges(
+          post._id,
+          pollOptions || [],
+          'CP',
+          user._id
+        );
+      }
 
       if (originalState === 'DRAFT' && patch.state === 'PUBLISHED') {
         await notifyUsersPublishedPost(subdomain, models, post);
@@ -308,10 +422,13 @@ export const generatePostModel = (
       return post;
     }
 
-    public static async deletePost(_id: string): Promise<PostDocument> {
+    public static async deletePost(
+      _id: string,
+      user: IUserDocument
+    ): Promise<PostDocument> {
       const post = await models.Post.findByIdOrThrow(_id);
       await post.remove();
-      await models.Comment.deleteMany({ postId: _id });
+      cleanupAfterDelete(models, _id, 'CRM', user._id);
       return post;
     }
 
@@ -440,7 +557,7 @@ export const generatePostModel = (
     ): Promise<PostDocument> {
       const post = await models.Post.findByIdOrThrow(_id);
 
-      if (post.createdByCpId !== cpUser.userId) {
+      if (!post.createdByCpId || post.createdByCpId !== cpUser?.userId) {
         throw new Error(`This post doesn't belong to the current user`);
       }
 
@@ -452,7 +569,9 @@ export const generatePostModel = (
     ): Promise<PostDocument> {
       if (!cpUser) throw new LoginRequiredError();
 
-      const category = await models.Category.findById(input.categoryId);
+      const { pollOptions, ...post } = input;
+
+      const category = await models.Category.findById(post.categoryId);
 
       await models.Category.ensureUserIsAllowed('WRITE_POST', category, cpUser);
 
@@ -460,10 +579,10 @@ export const generatePostModel = (
         ? 'PENDING'
         : 'APPROVED';
 
-      const lastPublishedAt = input.state === 'PUBLISHED' ? new Date() : null;
+      const lastPublishedAt = post.state === 'PUBLISHED' ? new Date() : null;
 
       const res = await models.Post.create({
-        ...input,
+        ...post,
         categoryApprovalState,
 
         createdUserType: USER_TYPES[1],
@@ -472,8 +591,19 @@ export const generatePostModel = (
         updatedUserType: USER_TYPES[1],
         updatedByCpId: cpUser.userId,
 
-        lastPublishedAt
+        lastPublishedAt,
+
+        wordCount: wordCountHtml(input.content)
       });
+
+      if (pollOptions?.length) {
+        await models.PollOption.handleChanges(
+          res._id,
+          pollOptions.map(({ title, order }) => ({ title, order })),
+          'CP',
+          cpUser.userId
+        );
+      }
 
       if (res.state === 'PUBLISHED') {
         await notifyUsersPublishedPost(subdomain, models, res);
@@ -482,7 +612,7 @@ export const generatePostModel = (
     }
     public static async patchPostCp(
       _id: string,
-      patch: PostPatchInput,
+      input: PostPatchInput,
       cpUser?: ICpUser
     ): Promise<PostDocument> {
       if (!cpUser) throw new LoginRequiredError();
@@ -490,6 +620,8 @@ export const generatePostModel = (
       const post = await models.Post.findByIdOrThrowCp(_id, cpUser);
 
       const originalState = post.state;
+
+      const { pollOptions, ...patch } = input;
 
       const resultingCategoryId =
         patch.categoryId === undefined ? post.categoryId : patch.categoryId;
@@ -510,17 +642,30 @@ export const generatePostModel = (
         updatedAt: new Date()
       };
 
+      if (update.content) {
+        update.wordCount = wordCountHtml(update.content);
+      }
+
       if (originalState === 'DRAFT' && update.state === 'PUBLISHED') {
         update.lastPublishedAt = new Date();
         update.viewCount = 0;
       }
 
       _.assign(post, update);
+      await post.save();
+
+      if (pollOptions !== undefined) {
+        await models.PollOption.handleChanges(
+          post._id,
+          pollOptions || [],
+          'CP',
+          cpUser.userId
+        );
+      }
 
       if (originalState === 'DRAFT' && post.state === 'PUBLISHED') {
         await notifyUsersPublishedPost(subdomain, models, post);
       }
-      await post.save();
       return post;
     }
 
@@ -531,7 +676,7 @@ export const generatePostModel = (
       if (!cpUser) throw new LoginRequiredError();
       const post = await models.Post.findByIdOrThrowCp(_id, cpUser);
       await post.remove();
-      await models.Comment.deleteMany({ postId: _id });
+      await cleanupAfterDelete(models, post._id, 'CP', cpUser.userId);
       return post;
     }
 
@@ -568,7 +713,6 @@ export const generatePostModel = (
     }
 
     public static async updateTrendScoreOfPublished(query = {}) {
-      const now = Date.now();
       await models.Post.find(
         { ...query, state: 'PUBLISHED' },
         { viewCount: 1, lastPublishedAt: 1, trendScore: 1 },
@@ -577,6 +721,7 @@ export const generatePostModel = (
         .cursor()
         .eachAsync(async function updateTrendScores(post: PostDocument) {
           if (!post.lastPublishedAt) return;
+          const now = Date.now();
 
           const elapsedSeconds = (now - post.lastPublishedAt.getTime()) / 1000;
           post.trendScore = post.viewCount / elapsedSeconds;

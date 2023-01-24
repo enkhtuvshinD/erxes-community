@@ -42,6 +42,7 @@ export const CATEGORY_DETAIL = gql`
       postWriteRequiresPermissionGroup
       commentWriteRequiresPermissionGroup
       order
+      description
       parent {
         _id
         name
@@ -165,10 +166,15 @@ export const FORUM_POST_DETAIL = gql`
 
       categoryApprovalState
 
+      description
+
       viewCount
 
       upVoteCount
       downVoteCount
+
+      isPollMultiChoice
+      pollEndDate
 
       createdUserType
       createdBy {
@@ -195,6 +201,23 @@ export const FORUM_POST_DETAIL = gql`
       }
 
       lastPublishedAt
+
+      tagIds
+
+      tags {
+        _id
+        colorCode
+        name
+      }
+
+      pollOptions {
+        _id
+        title
+        order
+      }
+
+      isFeaturedByAdmin
+      isFeaturedByUser
     }
   }
 `;
@@ -259,6 +282,7 @@ export const PERMISSION_GROUP_QUERY = gql`
         firstName
         lastName
         username
+        type
       }
     }
   }
