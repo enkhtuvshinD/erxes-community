@@ -1,6 +1,7 @@
 import React from 'react';
 import gql from 'graphql-tag';
 import { useMutation, useQuery } from 'react-apollo';
+import { Link } from 'react-router-dom';
 
 const LIST_QUERY = gql`
   query ForumQuizzes($limit: Int, $offset: Int, $sort: JSON) {
@@ -35,6 +36,7 @@ const QuizList: React.FC<{}> = () => {
   if (error) return <pre>{JSON.stringify(error, null, 2)}</pre>;
   return (
     <div>
+      <Link to="/forums/quizzes/new">Create new quiz</Link>
       <table>
         <thead>
           <tr>
