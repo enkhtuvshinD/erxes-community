@@ -22,6 +22,7 @@ import ForumPage from './ForumPage';
 import ForumSavedPost from './ForumSavedPost';
 import ForumPollOption from './ForumPollOption';
 import ForumUserStatistics from './ForumUserStatistics';
+import QuizTypes from './QuizTypes';
 
 const Invoice = `
   extend type Invoice @key(fields: "_id") {
@@ -138,6 +139,8 @@ export default async function genTypeDefs(serviceDiscovery) {
     ${ForumPollOption}
 
     ${ForumUserStatistics}
+
+    ${QuizTypes}
 
     ${Query}
     ${Mutation}
