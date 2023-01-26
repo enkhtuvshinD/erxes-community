@@ -24,16 +24,39 @@ const LIST_QUERY = gql`
   }
 `;
 
+const MUT_DELETE = gql`
+  mutation ForumQuizDelete($id: ID!) {
+    forumQuizDelete(_id: $id) {
+      _id
+    }
+  }
+`;
+
 const QuizList: React.FC<{}> = () => {
   const { data, loading, error } = useQuery(LIST_QUERY, {
+    fetchPolicy: 'network-only',
     variables: {
       sort: {
         _id: -1
       }
     }
   });
+
+  const [mutDelete] = useMutation(MUT_DELETE, {
+    refetchQueries: ['ForumQuizzes']
+  });
+
+  const deleteQuiz = async (id: string) => {
+    if (!confirm('Are you sure?')) return;
+    try {
+      await mutDelete({ variables: { id } });
+    } catch (e) {
+      alert(e.message);
+    }
+  };
   if (loading) return null;
   if (error) return <pre>{JSON.stringify(error, null, 2)}</pre>;
+
   return (
     <div>
       <Link to="/forums/quizzes/new">Create new quiz</Link>
@@ -45,6 +68,7 @@ const QuizList: React.FC<{}> = () => {
             <th>Company</th>
             <th>Post</th>
             <th>Category</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -57,6 +81,13 @@ const QuizList: React.FC<{}> = () => {
               </td>
               <td>{quiz.post?.title ? quiz.post?.title : ''}</td>
               <td>{quiz.category?.name ? quiz.category.name : ''}</td>
+              <td>
+                <Link to={`/forums/quizzes/${quiz._id}`}>Details</Link> |{' '}
+                <Link to={`/forums/quizzes/${quiz._id}/edit`}>Edit</Link> |{' '}
+                <button type="button" onClick={() => deleteQuiz(quiz._id)}>
+                  Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

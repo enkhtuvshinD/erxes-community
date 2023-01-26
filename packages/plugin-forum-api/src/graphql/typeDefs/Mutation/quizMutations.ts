@@ -8,6 +8,8 @@ const quizMutations = `
         name: String
         description: String
     ): ForumQuiz!
+
+    forumQuizDelete(_id: ID!): ForumQuiz!
 `;
 
 export default quizMutations;
