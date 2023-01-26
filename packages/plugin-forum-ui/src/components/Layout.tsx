@@ -19,6 +19,7 @@ import SubscriptionProductEdit from '../containers/SubscriptionProduct/Edit';
 import ExtendSubscription from '../containers/ExtendSubscription';
 import QuizList from '../containers/Quiz/List';
 import QuizNew from '../containers/Quiz/New';
+import QuizDetail from '../containers/Quiz/Detail';
 
 function Layout() {
   const { path, url } = useRouteMatch();
@@ -139,6 +140,10 @@ function Layout() {
           </Route>
           <Route exact path={`/forums/quizzes/new`}>
             <QuizNew />
+          </Route>
+
+          <Route exact path={`/forums/quizzes/:quizId`}>
+            <QuizDetail />
           </Route>
         </Switch>
       </div>

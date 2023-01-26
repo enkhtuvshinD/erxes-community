@@ -11,6 +11,9 @@ const quizQueries: IObjectTypeResolver<any, IContext> = {
       .sort(sort)
       .skip(offset)
       .limit(limit);
+  },
+  forumQuiz(_, { _id }, { models: { Quiz } }) {
+    return Quiz.findByIdOrThrow(_id);
   }
 };
 

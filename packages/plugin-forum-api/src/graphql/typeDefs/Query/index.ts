@@ -88,6 +88,7 @@ const Query = `
     forumMostPublishedUsers(categoryId: ID, limit: Int, offset: Int): [ClientPortalUser] @cacheControl(maxAge: 600)
 
     forumQuizzes(sort: JSON, offset: Int, limit: Int): [ForumQuiz!]
+    forumQuiz(_id: ID!): ForumQuiz!
   }
 `;
 
