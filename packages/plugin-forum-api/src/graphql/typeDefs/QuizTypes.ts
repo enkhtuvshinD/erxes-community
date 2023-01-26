@@ -12,7 +12,7 @@ type ForumQuiz @key(fields: "_id") @cacheControl(maxAge: 60) {
     postId: ID
     companyId: ID
     tagIds: [ID!]
-    categoryId: [ID!]
+    categoryId: ID
 
     state: ForumQuizState!
   

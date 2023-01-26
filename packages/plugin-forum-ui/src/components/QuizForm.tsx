@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useSearchParam } from '../hooks';
-import { useQuery } from 'react-apollo';
+import { useQuery, useLazyQuery } from 'react-apollo';
 import gql from 'graphql-tag';
+import CategorySelect from '../containers/CategorySelect';
+import CompanySelect from './CompanySelect';
 
 export const QUIZ_STATES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
 export type QuizState = typeof QUIZ_STATES[number];
@@ -16,6 +18,37 @@ const QUERY_TAGS = gql`
   }
 `;
 
+const QUERY_COMPANY = gql`
+  query CompanyDetail($id: String!) {
+    companyDetail(_id: $id) {
+      _id
+      primaryEmail
+      primaryName
+    }
+  }
+`;
+
+const ShowCompany: React.FC<{ companyId?: string }> = ({ companyId }) => {
+  const { loading, error, data } = useQuery(QUERY_COMPANY, {
+    variables: { id: companyId }
+  });
+
+  if (!companyId) return <span>No company</span>;
+
+  if (loading) return <span>Loading...</span>;
+  if (error) return <span>Error: {error.message}</span>;
+
+  const {
+    companyDetail: { primaryEmail, primaryName }
+  } = data;
+
+  return (
+    <span>
+      {primaryName + ' - ' || ''} {primaryEmail || ''}
+    </span>
+  );
+};
+
 type Props = {
   quiz?: {
     _id: any;
@@ -29,8 +62,6 @@ type Props = {
     description?: string | null;
 
     isLocked: boolean;
-
-    state: QuizState;
   };
   onSubmit?: (val: any) => any;
 };
@@ -42,6 +73,9 @@ const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
   const [postId] = useSearchParam('postId');
   const [name, setName] = useState(quiz?.name || '');
   const [description, setDescription] = useState(quiz?.description || '');
+  const [categoryId, setCategoryId] = useState(quiz?.categoryId || '');
+  const [companyId, setCompanyId] = useState(quiz?.companyId || '');
+  const [showCompanySelect, setShowCompanySelect] = useState(false);
 
   const initialCheckedTagIds = {};
   quiz?.tagIds?.forEach(id => {
@@ -54,6 +88,17 @@ const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
 
   const _onSubmit = e => {
     e.preventDefault();
+    if (!onSubmit) return;
+    onSubmit({
+      postId: postId || null,
+      companyId: companyId || null,
+      categoryId: categoryId || null,
+      tagIds: Object.entries(checkedTagIds)
+        .filter(([_, checked]) => checked)
+        .map(([id]) => id),
+      name,
+      description
+    });
   };
 
   return (
@@ -73,6 +118,24 @@ const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
           type="text"
           value={description}
           onChange={e => setDescription(e.target.value)}
+        />
+      </label>
+
+      <br />
+      <label>
+        Category
+        <CategorySelect value={categoryId} onChange={setCategoryId} />
+      </label>
+
+      <br />
+
+      <label>
+        Company: <ShowCompany companyId={companyId} />{' '}
+        <button onClick={() => setShowCompanySelect(true)}>Select</button>
+        <CompanySelect
+          show={showCompanySelect}
+          onCancel={() => setShowCompanySelect(false)}
+          onChoose={setCompanyId}
         />
       </label>
 

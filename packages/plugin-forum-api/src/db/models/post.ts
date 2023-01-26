@@ -241,7 +241,7 @@ export const postSchema = new Schema<PostDocument>({
 
   customIndexed: Schema.Types.Mixed,
 
-  tagIds: [String],
+  tagIds: [{ type: String, index: true, sparse: true }],
   wordCount: Number,
   isPollMultiChoice: Boolean,
   pollEndDate: Date,
