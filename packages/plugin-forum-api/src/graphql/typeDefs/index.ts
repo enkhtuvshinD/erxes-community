@@ -105,6 +105,10 @@ export default async function genTypeDefs(serviceDiscovery) {
 
     ${isTagsEnabled ? Tag : ''}
 
+    extend type Company @key(fields: "_id") {
+      _id: String! @external
+    }
+
     extend type ClientPortalUser @key(fields: "_id") {
       _id: String! @external
       forumSubscriptionEndsAfter: Date

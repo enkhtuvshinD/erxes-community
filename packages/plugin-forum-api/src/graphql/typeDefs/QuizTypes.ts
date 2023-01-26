@@ -1,4 +1,10 @@
+import { QUIZ_STATES } from '../../db/models/quiz';
+
 const QuizTypes = `
+
+enum ForumQuizState {
+    ${QUIZ_STATES.join('\n')}
+}
 
 type ForumQuiz @key(fields: "_id") @cacheControl(maxAge: 60) {
     _id: ID!
@@ -7,12 +13,18 @@ type ForumQuiz @key(fields: "_id") @cacheControl(maxAge: 60) {
     companyId: ID
     tagIds: [ID!]
     categoryId: [ID!]
+
+    state: ForumQuizState!
   
     name: String
     description: String  
     isLocked: Boolean!
 
     questions: [ForumQuizQuestion!]
+    company: Company
+    tags: [Tag]
+    category: ForumCategory
+    post: ForumPost
 }
 
 type ForumQuizQuestion @key(fields: "_id") @cacheControl(maxAge: 60) {

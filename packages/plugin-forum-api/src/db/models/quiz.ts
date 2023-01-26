@@ -4,6 +4,9 @@ import * as _ from 'lodash';
 import { ICpUser } from '../../graphql';
 import { LoginRequiredError } from '../../customErrors';
 
+export const QUIZ_STATES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
+export type QuizState = typeof QUIZ_STATES[number];
+
 export interface Quiz {
   _id: any;
 
@@ -16,6 +19,8 @@ export interface Quiz {
   description?: string | null;
 
   isLocked: boolean;
+
+  state: QuizState;
 }
 
 export type QuizDocument = Quiz & Document;
@@ -26,6 +31,7 @@ export const quizSchema = new Schema<QuizDocument>({
   tagIds: { type: Schema.Types.ObjectId, index: true, sparse: true },
   categoryId: { type: Schema.Types.ObjectId, index: true, sparse: true },
   isLocked: { type: Boolean, default: false, required: true },
+  state: { type: String, enum: QUIZ_STATES, default: (): QuizState => 'DRAFT' },
 
   name: String,
   description: String
@@ -33,7 +39,9 @@ export const quizSchema = new Schema<QuizDocument>({
 
 export interface QuizModel extends Model<QuizDocument> {
   findByIdOrThrow(_id: string): Promise<QuizDocument>;
-  createQuiz(input: Omit<Quiz, '_id' | 'isLocked'>): Promise<QuizDocument>;
+  createQuiz(
+    input: Omit<Quiz, '_id' | 'isLocked' | 'state'>
+  ): Promise<QuizDocument>;
   patchQuiz(
     _id: string,
     patch: Partial<Omit<Quiz, '_id' | 'isLocked'>>

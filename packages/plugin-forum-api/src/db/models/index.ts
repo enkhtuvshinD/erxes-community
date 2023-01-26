@@ -27,7 +27,12 @@ import { generateFollowTagModel, IFollowTagModel } from './followTag';
 import { generateSavedPostModel, SavedPostModel } from './savepost';
 import { generatePollOptionModel, PollOptionModel } from './pollOption';
 import { generatePollVoteModel, PollVoteModel } from './pollVote';
-import { QuizChoiceModel, QuizModel, QuizQuestionModel } from './quiz';
+import {
+  generateQuizModels,
+  QuizChoiceModel,
+  QuizModel,
+  QuizQuestionModel
+} from './quiz';
 
 export interface IModels {
   Category: ICategoryModel;
@@ -74,6 +79,7 @@ export const generateModels = createGenerateModels<IModels>(
     generateSavedPostModel(subdomain, connection, models);
     generatePollOptionModel(subdomain, connection, models);
     generatePollVoteModel(subdomain, connection, models);
+    generateQuizModels(subdomain, connection, models);
     return models;
   }
 );

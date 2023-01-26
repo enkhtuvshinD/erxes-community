@@ -297,6 +297,7 @@ async function cleanupAfterDelete(
   await models.Comment.deleteMany({ postId: _id });
   await models.PostUpVote.deleteMany({ contentId: _id });
   await models.PostDownVote.deleteMany({ contentId: _id });
+  await models.Quiz.updateMany({ postId: _id }, { $unset: { postId: 1 } });
   await models.PollOption.handleChanges(_id, [], userType, userId);
 }
 
