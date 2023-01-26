@@ -41,7 +41,15 @@ export type QuizDocument = Quiz & Document;
 export type QuizQuestionDocument = QuizQuestion & Document;
 export type QuizChoiceDocument = QuizChoice & Document;
 
-export interface QuizModel extends Model<QuizDocument> {}
+export interface QuizModel extends Model<QuizDocument> {
+  findByIdOrThrow(_id: string): Promise<QuizDocument>;
+  createQuiz(input: Omit<Quiz, '_id' | 'isLocked'>): Promise<QuizDocument>;
+  patchQuiz(
+    _id: string,
+    patch: Partial<Omit<Quiz, '_id' | 'isLocked'>>
+  ): Promise<QuizDocument>;
+  deleteQuiz(_id: string): Promise<QuizDocument>;
+}
 
 export interface QuizQuestionModel extends Model<QuizQuestionDocument> {}
 
@@ -89,7 +97,34 @@ export const generateQuizModels = (
   con: Connection,
   models: IModels
 ): void => {
-  class QuizStatics {}
+  class QuizStatics {
+    public static async findByIdOrThrow(_id: string) {
+      const quiz = await models.Quiz.findById(_id);
+      if (!quiz) {
+        throw new Error('Quiz not found');
+      }
+      return quiz;
+    }
+    public static async createQuiz(
+      input: Omit<Quiz, '_id' | 'isLocked'>
+    ): Promise<QuizDocument> {
+      return models.Quiz.create(input);
+    }
+    public static async patchQuiz(
+      _id: string,
+      patch: Partial<Omit<Quiz, '_id' | 'isLocked'>>
+    ): Promise<QuizDocument> {
+      const quiz = await models.Quiz.findByIdOrThrow(_id);
+      _.merge(quiz, patch);
+      return quiz.save();
+    }
+    public static async deleteQuiz(_id: string): Promise<QuizDocument> {
+      const quiz = await models.Quiz.findByIdOrThrow(_id);
+      await models.QuizChoice.deleteMany({ quizId: _id });
+      await models.QuizQuestion.deleteMany({ quizId: _id });
+      return quiz.remove();
+    }
+  }
   quizSchema.loadClass(QuizStatics);
 
   class QuizQuestionStatics {}
