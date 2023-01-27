@@ -71,8 +71,8 @@ const generateQuizModel = (
       _id: string,
       patch: Partial<Omit<Quiz, '_id' | 'isLocked'>>
     ): Promise<QuizDocument> {
-      const quiz = await models.Quiz.findOneAndUpdate(
-        { _id },
+      const quiz = await models.Quiz.findByIdAndUpdate(
+        _id,
         { $set: patch },
         { new: true }
       );
