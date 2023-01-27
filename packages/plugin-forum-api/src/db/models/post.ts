@@ -421,9 +421,15 @@ export const generatePostModel = (
         update.viewCount = 0;
       }
 
-      _.merge(post, update);
+      const updatedPost = await models.Post.findOneAndUpdate(
+        { _id },
+        { $set: update },
+        { new: true }
+      );
 
-      await post.save();
+      if (!updatedPost) {
+        throw new Error(`Post with \`{ "_id" : "${_id}"}\` doesn't exist`);
+      }
 
       if (pollOptions !== undefined) {
         await models.PollOption.handleChanges(
@@ -438,7 +444,7 @@ export const generatePostModel = (
         await notifyUsersPublishedPost(subdomain, models, post);
       }
 
-      return post;
+      return updatedPost;
     }
 
     public static async deletePost(
@@ -670,8 +676,15 @@ export const generatePostModel = (
         update.viewCount = 0;
       }
 
-      _.merge(post, update);
-      await post.save();
+      const updatedPost = await models.Post.findByIdAndUpdate(
+        _id,
+        { $set: update },
+        { new: true }
+      );
+
+      if (!updatedPost) {
+        throw new Error('Post not found');
+      }
 
       if (pollOptions !== undefined) {
         await models.PollOption.handleChanges(
@@ -685,7 +698,7 @@ export const generatePostModel = (
       if (originalState === 'DRAFT' && post.state === 'PUBLISHED') {
         await notifyUsersPublishedPost(subdomain, models, post);
       }
-      return post;
+      return updatedPost;
     }
 
     public static async deletePostCp(
