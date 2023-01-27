@@ -71,9 +71,15 @@ const generateQuizModel = (
       _id: string,
       patch: Partial<Omit<Quiz, '_id' | 'isLocked'>>
     ): Promise<QuizDocument> {
-      const quiz = await models.Quiz.findByIdOrThrow(_id);
-      _.merge(quiz, patch);
-      return quiz.save();
+      const quiz = await models.Quiz.findOneAndUpdate(
+        { _id },
+        { $set: patch },
+        { new: true }
+      );
+      if (!quiz) {
+        throw new Error('Quiz not found');
+      }
+      return quiz;
     }
     public static async deleteQuiz(_id: string): Promise<QuizDocument> {
       const quiz = await models.Quiz.findByIdOrThrow(_id);

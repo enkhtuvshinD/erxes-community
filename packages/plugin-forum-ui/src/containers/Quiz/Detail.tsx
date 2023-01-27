@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from 'react-apollo';
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useHistory } from 'react-router-dom';
 import gql from 'graphql-tag';
 import Form from '../../components/QuizQuestionForm';
 import Question from './Question';
@@ -58,11 +58,20 @@ const MUT_CREATE = gql`
   }
 `;
 
+const MUT_DELETE = gql`
+  mutation ForumQuizDelete($id: ID!) {
+    forumQuizDelete(_id: $id) {
+      _id
+    }
+  }
+`;
+
 const QuizDetail: React.FC<{}> = () => {
   const { quizId } = useParams();
+  const history = useHistory();
   const [showForm, setShowForm] = useState(false);
 
-  const { data, loading, error } = useQuery(QUERY, {
+  const { data, loading, error, refetch } = useQuery(QUERY, {
     fetchPolicy: 'network-only',
     variables: {
       id: quizId
@@ -73,6 +82,13 @@ const QuizDetail: React.FC<{}> = () => {
     refetchQueries: ['ForumQuiz']
   });
 
+  const [mutDelete] = useMutation(MUT_DELETE, {
+    onCompleted: () => {
+      history.push('/forums/quizzes');
+    },
+    onError: e => alert(e.message)
+  });
+
   if (loading) return <div>Loading...</div>;
   if (error) {
     console.error(error);
@@ -80,8 +96,6 @@ const QuizDetail: React.FC<{}> = () => {
   }
 
   const quiz = data.forumQuiz;
-
-  console.log(quiz);
 
   const onCreateSubmit = async variables => {
     await mutCreate({
@@ -138,15 +152,25 @@ const QuizDetail: React.FC<{}> = () => {
           {(quiz.tags?.length || 0) > 0 ? (
             <tr>
               <th>Tags: </th>
-              <td>
-                {quiz.tags.map(t => (
-                  <span>{t.name}</span>
-                ))}
-              </td>
+              <td>{quiz.tags.map(({ name }) => name).join(', ')}</td>
             </tr>
           ) : null}
         </tbody>
       </table>
+
+      <div style={{ marginLeft: 20 }}>
+        <Link to={`/forums/quizzes/${quiz._id}/edit`}>Edit</Link>
+        {'   '}
+        <button
+          type="button"
+          onClick={() => {
+            if (!confirm('Are you sure?')) return;
+            mutDelete({ variables: { id: quiz._id } });
+          }}
+        >
+          Delete
+        </button>
+      </div>
 
       <div>
         <h2>
@@ -156,7 +180,12 @@ const QuizDetail: React.FC<{}> = () => {
         <div style={{ paddingLeft: 30 }}>
           {(quiz.questions?.length || 0) > 0 ? (
             quiz.questions.map((q, i) => (
-              <Question key={q._id} _id={q._id} index={i} />
+              <Question
+                key={q._id}
+                _id={q._id}
+                index={i}
+                quizRefetch={refetch}
+              />
             ))
           ) : (
             <div>No questions</div>

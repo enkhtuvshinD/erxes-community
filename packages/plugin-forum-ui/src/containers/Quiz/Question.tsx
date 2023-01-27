@@ -69,10 +69,19 @@ const CREATE_CHOICE = gql`
   }
 `;
 
-const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
-  _id,
-  index
-}) => {
+const DELETE_QUESTION = gql`
+  mutation ForumQuizQuestionDelete($id: ID!) {
+    forumQuizQuestionDelete(_id: $id) {
+      _id
+    }
+  }
+`;
+
+const QuestionDetail: React.FC<{
+  _id: string;
+  index: number;
+  quizRefetch: () => any;
+}> = ({ _id, index, quizRefetch }) => {
   const { data, loading, error, refetch } = useQuery(QUERY, {
     variables: {
       _id
@@ -84,6 +93,10 @@ const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
   });
 
   const [createChoice] = useMutation(CREATE_CHOICE, {
+    onCompleted: refetch
+  });
+
+  const [deleteQuestion] = useMutation(DELETE_QUESTION, {
     onCompleted: refetch
   });
 
@@ -116,6 +129,16 @@ const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
     setShowChoiceForm(false);
   };
 
+  const onDeleteQuestion = async () => {
+    if (!confirm('Are you sure you want to delete this question?')) return;
+    await deleteQuestion({
+      variables: {
+        id: _id
+      }
+    });
+    quizRefetch();
+  };
+
   return (
     <div>
       <Form
@@ -132,12 +155,23 @@ const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
       <h3>
         {index + 1}. {question.text}{' '}
         {question.isMultipleChoice ? '(Multiple choice)' : ''}{' '}
-        <button type="button" onClick={() => setShowForm(true)}>
-          Edit
-        </button>
-        <button type="button" onClick={() => setShowChoiceForm(true)}>
-          Add choice
-        </button>
+        <span style={{ fontSize: 14 }}>
+          <button type="button" onClick={() => setShowForm(true)}>
+            Edit
+          </button>
+          <button type="button" onClick={() => setShowChoiceForm(true)}>
+            + Add choice
+          </button>
+          <span>
+            <button
+              type="button"
+              onClick={onDeleteQuestion}
+              style={{ color: 'red' }}
+            >
+              Delete question
+            </button>
+          </span>
+        </span>
       </h3>
 
       <div style={{ paddingLeft: 40 }}>

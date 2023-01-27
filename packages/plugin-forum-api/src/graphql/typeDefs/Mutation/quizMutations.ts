@@ -9,6 +9,17 @@ const quizMutations = `
         description: String
     ): ForumQuiz!
 
+    forumQuizPatch(
+        _id: ID!
+        postId: ID
+        companyId: ID
+        categoryId: ID
+        tagIds: [ID!]
+      
+        name: String
+        description: String
+    ): ForumQuiz!
+
     forumQuizDelete(_id: ID!): ForumQuiz!
 
     forumQuizQuestionCreate(
@@ -26,6 +37,8 @@ const quizMutations = `
         isMultipleChoice: Boolean
         listOrder: Float
     ): ForumQuizQuestion!
+
+    forumQuizQuestionDelete(_id: ID!): ForumQuizQuestion!
 
     forumQuizChoiceCreate(
         quizId: ID!

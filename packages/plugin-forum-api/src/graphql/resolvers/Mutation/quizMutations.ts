@@ -6,6 +6,9 @@ const quizMutations: IObjectTypeResolver<any, IContext> = {
   forumQuizCreate(_, args, { models: { Quiz } }) {
     return Quiz.createQuiz(args);
   },
+  forumQuizPatch(_, { _id, ...patch }, { models: { Quiz } }) {
+    return Quiz.patchQuiz(_id, patch);
+  },
   forumQuizDelete(_, { _id }, { models: { Quiz } }) {
     return Quiz.deleteQuiz(_id);
   },
@@ -23,6 +26,9 @@ const quizMutations: IObjectTypeResolver<any, IContext> = {
   },
   forumQuizChoiceDelete(_, { _id }, { models: { QuizChoice } }) {
     return QuizChoice.deleteChoice(_id);
+  },
+  forumQuizQuestionDelete(_, { _id }, { models: { QuizQuestion } }) {
+    return QuizQuestion.deleteQuestion(_id);
   }
 };
 

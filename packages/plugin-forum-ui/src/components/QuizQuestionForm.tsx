@@ -49,7 +49,7 @@ const QuizQuestionForm: React.FC<Props> = ({
       text,
       imageUrl,
       isMultipleChoice,
-      listOrder: Number(listOrder)
+      listOrder: Number(listOrder) || 0
     });
   };
 
