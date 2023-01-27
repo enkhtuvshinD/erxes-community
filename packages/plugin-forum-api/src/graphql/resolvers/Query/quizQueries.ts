@@ -2,7 +2,6 @@
 
 import { IContext } from '../..';
 import { IObjectTypeResolver } from '@graphql-tools/utils';
-import { requireLogin } from '@erxes/api-utils/src';
 import { moduleRequireLogin } from '@erxes/api-utils/src/permissions';
 
 const quizQueries: IObjectTypeResolver<any, IContext> = {
@@ -14,6 +13,9 @@ const quizQueries: IObjectTypeResolver<any, IContext> = {
   },
   forumQuiz(_, { _id }, { models: { Quiz } }) {
     return Quiz.findByIdOrThrow(_id);
+  },
+  forumQuizQuestion(_, { _id }, { models: { QuizQuestion } }) {
+    return QuizQuestion.findByIdOrThrow(_id);
   }
 };
 

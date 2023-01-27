@@ -89,6 +89,7 @@ const Query = `
 
     forumQuizzes(sort: JSON, offset: Int, limit: Int): [ForumQuiz!]
     forumQuiz(_id: ID!): ForumQuiz!
+    forumQuizQuestion(_id: ID!): ForumQuizQuestion!
   }
 `;
 

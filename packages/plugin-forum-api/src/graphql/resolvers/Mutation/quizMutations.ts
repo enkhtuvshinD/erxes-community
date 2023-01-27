@@ -8,6 +8,9 @@ const quizMutations: IObjectTypeResolver<any, IContext> = {
   },
   forumQuizDelete(_, { _id }, { models: { Quiz } }) {
     return Quiz.deleteQuiz(_id);
+  },
+  forumQuizQuestionCreate(_, args, { models: { QuizQuestion } }) {
+    return QuizQuestion.createQuestion(args);
   }
 };
 

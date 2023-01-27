@@ -1,7 +1,9 @@
-import React from 'react';
-import { useQuery } from 'react-apollo';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from 'react-apollo';
 import { useParams } from 'react-router-dom';
 import gql from 'graphql-tag';
+import Form from '../../components/QuizQuestionForm';
+import Question from './Question';
 
 const QUERY = gql`
   query ForumQuiz($id: ID!) {
@@ -36,14 +38,39 @@ const QUERY = gql`
   }
 `;
 
+const MUT_CREATE = gql`
+  mutation ForumQuizQuestionCreate(
+    $isMultipleChoice: Boolean!
+    $listOrder: Float!
+    $quizId: ID!
+    $imageUrl: String
+    $text: String
+  ) {
+    forumQuizQuestionCreate(
+      isMultipleChoice: $isMultipleChoice
+      listOrder: $listOrder
+      quizId: $quizId
+      imageUrl: $imageUrl
+      text: $text
+    ) {
+      _id
+    }
+  }
+`;
+
 const QuizDetail: React.FC<{}> = () => {
   const { quizId } = useParams();
+  const [showForm, setShowForm] = useState(false);
 
   const { data, loading, error } = useQuery(QUERY, {
     fetchPolicy: 'network-only',
     variables: {
       id: quizId
     }
+  });
+
+  const [mutCreate] = useMutation(MUT_CREATE, {
+    refetchQueries: ['ForumQuiz']
   });
 
   if (loading) return <div>Loading...</div>;
@@ -56,8 +83,23 @@ const QuizDetail: React.FC<{}> = () => {
 
   console.log(quiz);
 
+  const onCreateSubmit = async variables => {
+    await mutCreate({
+      variables: {
+        ...variables,
+        quizId
+      }
+    });
+    setShowForm(false);
+  };
+
   return (
     <div>
+      <Form
+        show={showForm}
+        onSubmit={onCreateSubmit}
+        onCancel={() => setShowForm(false)}
+      />
       <table>
         <tbody>
           <tr>
@@ -105,6 +147,22 @@ const QuizDetail: React.FC<{}> = () => {
           ) : null}
         </tbody>
       </table>
+
+      <div>
+        <h1>
+          Questions <button onClick={() => setShowForm(true)}>+</button>
+        </h1>
+
+        <div style={{ paddingLeft: 30 }}>
+          {(quiz.questions?.length || 0) > 0 ? (
+            quiz.questions.map((q, i) => (
+              <Question key={q._id} _id={q._id} index={i} />
+            ))
+          ) : (
+            <div>No questions</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

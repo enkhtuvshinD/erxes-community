@@ -10,6 +10,14 @@ const quizMutations = `
     ): ForumQuiz!
 
     forumQuizDelete(_id: ID!): ForumQuiz!
+
+    forumQuizQuestionCreate(
+        quizId: ID!
+        text: String
+        imageUrl: String
+        isMultipleChoice: Boolean!
+        listOrder: Float!
+    ): ForumQuizQuestion!
 `;
 
 export default quizMutations;
