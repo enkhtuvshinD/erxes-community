@@ -4,18 +4,18 @@ import gql from 'graphql-tag';
 import { CATEGORIES_ALL } from '../graphql/queries';
 import { Modal } from 'react-bootstrap';
 
-export type Choice = {
-  _id: string;
+export type ChoiceEditable = {
   imageUrl?: string;
   isCorrect: boolean;
   listOrder: number;
-  questionId: string;
   text?: string;
 };
 
+export type Choice = { _id: string; questionId: string } & ChoiceEditable;
+
 type Props = {
-  choice?: Choice;
-  onSubmit(question: Omit<Choice, '_id' | 'questionId'>): any;
+  choice?: ChoiceEditable;
+  onSubmit(question: ChoiceEditable): any;
   onCancel(): any;
   show: boolean;
 };

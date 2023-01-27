@@ -129,7 +129,7 @@ const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
         show={showChoiceForm}
         onSubmit={onNewChoice}
       />
-      <h2>
+      <h3>
         {index + 1}. {question.text}{' '}
         {question.isMultipleChoice ? '(Multiple choice)' : ''}{' '}
         <button type="button" onClick={() => setShowForm(true)}>
@@ -138,14 +138,25 @@ const QuestionDetail: React.FC<{ _id: string; index: number }> = ({
         <button type="button" onClick={() => setShowChoiceForm(true)}>
           Add choice
         </button>
-      </h2>
+      </h3>
 
       <div style={{ paddingLeft: 40 }}>
-        {question.choices?.length
-          ? question.choices.map((c, i) => (
-              <ChoiceDetail key={c._id} choice={c} index={i} />
-            ))
-          : 'No choices'}
+        {question.choices?.length ? (
+          <table>
+            <tbody>
+              {question.choices.map((c, i) => (
+                <ChoiceDetail
+                  key={c._id}
+                  choice={c}
+                  index={i}
+                  refetch={refetch}
+                />
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          'No choices'
+        )}
       </div>
     </div>
   );

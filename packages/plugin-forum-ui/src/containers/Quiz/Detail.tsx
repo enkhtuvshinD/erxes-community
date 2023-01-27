@@ -149,9 +149,9 @@ const QuizDetail: React.FC<{}> = () => {
       </table>
 
       <div>
-        <h1>
+        <h2>
           Questions <button onClick={() => setShowForm(true)}>+</button>
-        </h1>
+        </h2>
 
         <div style={{ paddingLeft: 30 }}>
           {(quiz.questions?.length || 0) > 0 ? (

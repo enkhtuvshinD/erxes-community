@@ -35,6 +35,16 @@ const quizMutations = `
         isCorrect: Boolean!
         listOrder: Float!
     ): ForumQuizChoice!
+
+    forumQuizChoicePatch(
+        _id: ID!
+        text: String
+        imageUrl: String
+        isCorrect: Boolean
+        listOrder: Float
+    ): ForumQuizChoice!
+
+    forumQuizChoiceDelete(_id: ID!): ForumQuizChoice!
 `;
 
 export default quizMutations;
