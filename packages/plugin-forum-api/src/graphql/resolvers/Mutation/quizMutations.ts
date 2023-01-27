@@ -29,6 +29,10 @@ const quizMutations: IObjectTypeResolver<any, IContext> = {
   },
   forumQuizQuestionDelete(_, { _id }, { models: { QuizQuestion } }) {
     return QuizQuestion.deleteQuestion(_id);
+  },
+  async forumQuizSetState(_, { _id, state }, { models: { Quiz } }) {
+    await Quiz.updateOne({ _id }, { $set: { state } });
+    return true;
   }
 };
 

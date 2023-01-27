@@ -66,6 +66,12 @@ const MUT_DELETE = gql`
   }
 `;
 
+const MUT_SET_STATE = gql`
+  mutation ForumQuizSetState($id: ID!, $state: ForumQuizState!) {
+    forumQuizSetState(_id: $id, state: $state)
+  }
+`;
+
 const QuizDetail: React.FC<{}> = () => {
   const { quizId } = useParams();
   const history = useHistory();
@@ -86,6 +92,11 @@ const QuizDetail: React.FC<{}> = () => {
     onCompleted: () => {
       history.push('/forums/quizzes');
     },
+    onError: e => alert(e.message)
+  });
+
+  const [mutSetState] = useMutation(MUT_SET_STATE, {
+    onCompleted: refetch,
     onError: e => alert(e.message)
   });
 
@@ -127,6 +138,36 @@ const QuizDetail: React.FC<{}> = () => {
           <tr>
             <th>State: </th>
             <td>{quiz.state}</td>
+            <td>
+              <button
+                type="button"
+                onClick={() => {
+                  mutSetState({ variables: { id: quizId, state: 'DRAFT' } });
+                }}
+              >
+                Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  mutSetState({
+                    variables: { id: quizId, state: 'PUBLISHED' }
+                  });
+                }}
+              >
+                Published
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  mutSetState({
+                    variables: { id: quizId, state: 'ARCHIVED' }
+                  });
+                }}
+              >
+                Archived
+              </button>
+            </td>
           </tr>
           {quiz.category && (
             <tr>

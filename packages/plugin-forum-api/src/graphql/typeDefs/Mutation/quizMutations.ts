@@ -58,6 +58,8 @@ const quizMutations = `
     ): ForumQuizChoice!
 
     forumQuizChoiceDelete(_id: ID!): ForumQuizChoice!
+
+    forumQuizSetState(_id: ID!, state: ForumQuizState!): Boolean
 `;
 
 export default quizMutations;
