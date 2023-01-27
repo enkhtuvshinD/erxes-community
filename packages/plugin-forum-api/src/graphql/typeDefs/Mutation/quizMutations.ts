@@ -18,6 +18,14 @@ const quizMutations = `
         isMultipleChoice: Boolean!
         listOrder: Float!
     ): ForumQuizQuestion!
+
+    forumQuizQuestionPatch(
+        _id: ID!
+        text: String
+        imageUrl: String
+        isMultipleChoice: Boolean
+        listOrder: Float
+    ): ForumQuizQuestion!
 `;
 
 export default quizMutations;

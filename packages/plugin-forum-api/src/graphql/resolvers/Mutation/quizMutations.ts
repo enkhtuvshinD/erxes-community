@@ -11,6 +11,9 @@ const quizMutations: IObjectTypeResolver<any, IContext> = {
   },
   forumQuizQuestionCreate(_, args, { models: { QuizQuestion } }) {
     return QuizQuestion.createQuestion(args);
+  },
+  forumQuizQuestionPatch(_, { _id, ...patch }, { models: { QuizQuestion } }) {
+    return QuizQuestion.patchQuestion(_id, patch);
   }
 };
 

@@ -34,8 +34,8 @@ const QuizNew = () => {
 
   const onSubmit = async variables => {
     try {
-      await mutation({ variables });
-      history.push('/forums/quizzes');
+      const res = await mutation({ variables });
+      history.push(`/forums/quizzes/${res.data.forumQuizCreate._id}`);
     } catch (e) {
       alert(e.message);
     }
