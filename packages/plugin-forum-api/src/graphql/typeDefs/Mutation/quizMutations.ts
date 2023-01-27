@@ -26,6 +26,15 @@ const quizMutations = `
         isMultipleChoice: Boolean
         listOrder: Float
     ): ForumQuizQuestion!
+
+    forumQuizChoiceCreate(
+        quizId: ID!
+        questionId: ID!
+        text: String
+        imageUrl: String
+        isCorrect: Boolean!
+        listOrder: Float!
+    ): ForumQuizChoice!
 `;
 
 export default quizMutations;
