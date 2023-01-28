@@ -294,6 +294,12 @@ const PostDetail: React.FC = () => {
       </div>
       <hr />
 
+      <div>
+        <Link to={`/forums/quizzes/new?postId=${postId}`}>
+          Create related quiz
+        </Link>
+      </div>
+
       <h1>View count: {forumPost.viewCount}</h1>
       <h1>Comments: {forumPost.commentCount}</h1>
       <Comments postId={postId} />

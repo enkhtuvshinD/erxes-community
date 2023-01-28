@@ -187,7 +187,11 @@ const QuizDetail: React.FC<{}> = () => {
           {quiz.post && (
             <tr>
               <th>Post: </th>
-              <td>{quiz.post.title}</td>
+              <td>
+                <Link to={`/forums/posts/${quiz.post._id}`}>
+                  {quiz.post.title}
+                </Link>
+              </td>
             </tr>
           )}
           {(quiz.tags?.length || 0) > 0 ? (

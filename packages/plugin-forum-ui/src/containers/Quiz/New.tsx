@@ -3,7 +3,7 @@ import Form from '../../components/QuizForm';
 import gql from 'graphql-tag';
 import { useMutation } from 'react-apollo';
 import { useHistory } from 'react-router-dom';
-
+import { useSearchParam } from '../../hooks';
 const MUT = gql`
   mutation ForumQuizCreate(
     $categoryId: ID

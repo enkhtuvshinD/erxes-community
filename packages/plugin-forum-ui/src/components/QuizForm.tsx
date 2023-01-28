@@ -4,6 +4,7 @@ import { useQuery, useLazyQuery } from 'react-apollo';
 import gql from 'graphql-tag';
 import CategorySelect from '../containers/CategorySelect';
 import CompanySelect from './CompanySelect';
+import { Link } from 'react-router-dom';
 
 export const QUIZ_STATES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
 export type QuizState = typeof QUIZ_STATES[number];
@@ -68,6 +69,30 @@ type Props = {
 
 export const timeDuractionUnits = ['days', 'weeks', 'months', 'years'] as const;
 export type TimeDurationUnit = typeof timeDuractionUnits[number];
+
+const RelatedPost: React.FC<{ postId: string }> = ({ postId }) => {
+  const { data, loading, error } = useQuery(
+    gql`
+      query ForumPost($id: ID!) {
+        forumPost(_id: $id) {
+          _id
+          title
+        }
+      }
+    `,
+    {
+      variables: { id: postId }
+    }
+  );
+
+  let link: any = 'No post';
+  if (loading) link = 'Loading...';
+  if (error) link = `Error: ${error.message}`;
+  if (data)
+    link = <Link to={`/forums/posts/${postId}`}>{data.forumPost.title}</Link>;
+
+  return <div>Related post: {link}</div>;
+};
 
 const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
   const [postId] = useSearchParam('postId');
@@ -138,6 +163,8 @@ const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
           onChoose={setCompanyId}
         />
       </label>
+
+      {postId && <RelatedPost postId={postId} />}
 
       <div>
         <h5>Tags</h5>
