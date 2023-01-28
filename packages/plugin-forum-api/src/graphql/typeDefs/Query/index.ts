@@ -91,7 +91,8 @@ const Query = `
     forumQuiz(_id: ID!): ForumQuiz!
     forumQuizQuestion(_id: ID!): ForumQuizQuestion!
 
-    forumCpPostRelatedQuizzes(_id: ID!, offset: Int, limit: Int): [ForumQuiz!]
+    forumCpPostRelatedQuizzes(_id: ID!, offset: Int, limit: Int): [ForumQuiz!] @cacheControl(maxAge: 60)
+    forumCpQuizzes(categoryId: ID, tagIds: [ID!], companyId: ID, postId: ID, offset: Int, limit: Int, sort: JSON): [ForumQuiz!] @cacheControl(maxAge: 60)
   }
 `;
 

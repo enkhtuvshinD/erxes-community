@@ -68,6 +68,33 @@ const cpQuizQueries: IObjectTypeResolver<any, IContext> = {
 
     const res = await Quiz.aggregate(aggregation);
     return res;
+  },
+
+  forumCpQuizzes(
+    _,
+    { offset = 0, limit = 0, sort = {}, ...params },
+    { models: { Quiz } }
+  ) {
+    const query: any = {
+      state: 'PUBLISHED'
+    };
+
+    for (const field of ['categoryId', 'companyId', 'postId']) {
+      if (params) {
+        query[field] = params[field];
+      }
+    }
+
+    if (params.tagIds) {
+      query.tagIds = { $in: params.tagIds };
+    }
+
+    console.log(query);
+
+    return Quiz.find(query)
+      .sort(sort)
+      .skip(offset)
+      .limit(limit);
   }
 };
 
