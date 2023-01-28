@@ -295,6 +295,18 @@ const PostDetail: React.FC = () => {
       <hr />
 
       <div>
+        {forumPost.quizzes && (
+          <div>
+            <h3>Related quizzes</h3>
+            <ul>
+              {forumPost.quizzes.map(quiz => (
+                <li key={quiz._id}>
+                  <Link to={`/forums/quizzes/${quiz._id}`}>{quiz.name}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <Link to={`/forums/quizzes/new?postId=${postId}`}>
           Create related quiz
         </Link>

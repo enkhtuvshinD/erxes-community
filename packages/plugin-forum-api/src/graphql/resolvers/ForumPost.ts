@@ -80,6 +80,16 @@ const ForumPost: IObjectTypeResolver<IPost, IContext> = {
     });
 
     return !!savedPost;
+  },
+
+  async quizzes({ _id }, _, { models: { Quiz }, user }) {
+    const query: any = { postId: _id };
+
+    if (!user) {
+      query.state = 'PUBLISHED';
+    }
+
+    return Quiz.find(query);
   }
 };
 
