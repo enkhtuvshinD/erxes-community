@@ -10,6 +10,7 @@ const LIST_QUERY = gql`
       name
       description
       company {
+        _id
         primaryName
       }
       post {
@@ -19,6 +20,10 @@ const LIST_QUERY = gql`
       category {
         _id
         name
+        parent {
+          _id
+          name
+        }
       }
     }
   }
@@ -77,10 +82,32 @@ const QuizList: React.FC<{}> = () => {
               <td>{quiz.name}</td>
               <td>{quiz.description}</td>
               <td>
-                {quiz.company?.primaryName ? quiz.company?.primaryName : ''}
+                {quiz.company?.primaryName ? (
+                  <Link to={`/companies/details/${quiz.company._id}`}>
+                    {quiz.company?.primaryName}
+                  </Link>
+                ) : (
+                  ''
+                )}
               </td>
-              <td>{quiz.post?.title ? quiz.post?.title : ''}</td>
-              <td>{quiz.category?.name ? quiz.category.name : ''}</td>
+              <td>
+                {quiz.post?.title ? (
+                  <Link to={`/forums/posts/${quiz.post._id}`}>
+                    {quiz.post?.title}
+                  </Link>
+                ) : (
+                  ''
+                )}
+              </td>
+              <td>
+                {quiz.category?.name ? (
+                  <Link to={`/forums/categories/${quiz.category._id}`}>
+                    {categoryName(quiz.category)}
+                  </Link>
+                ) : (
+                  ''
+                )}
+              </td>
               <td>
                 <Link to={`/forums/quizzes/${quiz._id}`}>Details</Link> |{' '}
                 <Link to={`/forums/quizzes/${quiz._id}/edit`}>Edit</Link> |{' '}
@@ -95,5 +122,11 @@ const QuizList: React.FC<{}> = () => {
     </div>
   );
 };
+
+function categoryName(category) {
+  if (!category) return '';
+  if (!category.parent) return category.name;
+  return `${categoryName(category.parent)} > ${category.name}`;
+}
 
 export default QuizList;
