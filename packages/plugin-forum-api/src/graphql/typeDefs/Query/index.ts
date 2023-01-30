@@ -91,6 +91,14 @@ const Query = `
     forumQuiz(_id: ID!): ForumQuiz!
     forumQuizQuestion(_id: ID!): ForumQuizQuestion!
 
+    forumCpQuiz(_id: ID!): ForumQuiz!
+
+    """
+      This query sorts quizzes by relatedness to the post in decreasing order.
+      1. Quizzes that are related to the post comes first.
+      2. Quizzes that are related to the post's category and tags comes second.
+      3. Quizzes that are related to the post's category or tags comes third.
+    """
     forumCpPostRelatedQuizzes(_id: ID!, offset: Int, limit: Int): [ForumQuiz!] @cacheControl(maxAge: 60)
     forumCpQuizzes(categoryId: ID, tagIds: [ID!], companyId: ID, postId: ID, offset: Int, limit: Int, sort: JSON): [ForumQuiz!] @cacheControl(maxAge: 60)
   }

@@ -27,25 +27,87 @@ const cpQuizQueries: IObjectTypeResolver<any, IContext> = {
     { models: { Quiz, Post } }
   ) {
     const post = await Post.findByIdOrThrow(_id);
+    const $matchOr: any[] = [{ postId: Types.ObjectId(_id) }];
+    if (post.tagIds?.length) {
+      $matchOr.push({ tagIds: { $in: post.tagIds } });
+    }
+    if (post.categoryId) {
+      $matchOr.push({ categoryId: Types.ObjectId(post.categoryId) });
+    }
+
+    const branches: any[] = [
+      {
+        case: {
+          $eq: ['$postId', Types.ObjectId(_id)]
+        },
+        then: 3
+      }
+    ];
+
+    if (post.categoryId && post.tagIds?.length) {
+      branches.push({
+        case: {
+          $and: [
+            { $eq: ['$categoryId', Types.ObjectId(post.categoryId)] },
+            {
+              $gt: [
+                {
+                  $size: {
+                    $setIntersection: [post.tagIds, '$tagIds']
+                  }
+                },
+                0
+              ]
+            }
+          ]
+        },
+        then: 2
+      });
+    } else {
+      const $or: any[] = [];
+
+      if (post.categoryId) {
+        $or.push({
+          $eq: ['$categoryId', Types.ObjectId(post.categoryId)]
+        });
+      }
+
+      if (post.tagIds?.length) {
+        $or.push({
+          $gt: [
+            {
+              $size: {
+                $setIntersection: [[0], '$tagIds']
+              }
+            },
+            0
+          ]
+        });
+      }
+
+      if ($or.length) {
+        branches.push({
+          case: {
+            $or
+          },
+          then: 1
+        });
+      }
+    }
+
     const aggregation: any[] = [
       {
         $match: {
-          $or: [
-            { postId: Types.ObjectId(_id) },
-            { tagIds: { $in: post.tagIds || [] } }
-          ],
+          $or: $matchOr,
           state: 'PUBLISHED'
         }
       },
       {
         $addFields: {
           postRelatedScore: {
-            $cond: {
-              if: {
-                $eq: ['$postId', Types.ObjectId(_id)]
-              },
-              then: 1,
-              else: 0
+            $switch: {
+              branches: branches,
+              default: -1
             }
           }
         }
@@ -95,6 +157,16 @@ const cpQuizQueries: IObjectTypeResolver<any, IContext> = {
       .sort(sort)
       .skip(offset)
       .limit(limit);
+  },
+  async forumCpQuiz(_, { _id }, { models: { Quiz } }) {
+    const quiz = await Quiz.findByIdOrThrow(_id);
+    if (quiz.state == 'DRAFT') {
+      throw new Error(`This quiz isn't published`);
+    }
+    if (quiz.state == 'ARCHIVED') {
+      throw new Error(`This quiz is archived`);
+    }
+    return quiz;
   }
 };
 
