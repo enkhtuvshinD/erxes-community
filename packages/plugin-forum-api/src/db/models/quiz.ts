@@ -27,7 +27,7 @@ export type QuizDocument = Quiz & Document;
 
 export const quizSchema = new Schema<QuizDocument>({
   postId: { type: Schema.Types.ObjectId, index: true, sparse: true },
-  companyId: { type: Schema.Types.ObjectId, index: true, sparse: true },
+  companyId: { type: String, index: true, sparse: true },
   tagIds: [{ type: String, index: true, sparse: true }],
   categoryId: { type: Schema.Types.ObjectId, index: true, sparse: true },
   isLocked: { type: Boolean, default: false, required: true },

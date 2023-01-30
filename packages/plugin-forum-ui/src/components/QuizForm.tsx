@@ -156,11 +156,16 @@ const SubscriptionProductForm: React.FC<Props> = ({ quiz, onSubmit }) => {
 
       <label>
         Company: <ShowCompany companyId={companyId} />{' '}
-        <button onClick={() => setShowCompanySelect(true)}>Select</button>
+        <button type="button" onClick={() => setShowCompanySelect(true)}>
+          Select
+        </button>
         <CompanySelect
           show={showCompanySelect}
           onCancel={() => setShowCompanySelect(false)}
-          onChoose={setCompanyId}
+          onChoose={chosenId => {
+            setCompanyId(chosenId);
+            setShowCompanySelect(false);
+          }}
         />
       </label>
 
