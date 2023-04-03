@@ -36,6 +36,7 @@ export interface IRemainder {
   departmentId: string;
   productId: string;
   count: number;
+  cost: number;
 }
 
 export interface IRemainderDocument extends IRemainder, Document {
@@ -51,7 +52,8 @@ export const remainderSchema = schemaHooksWrapper(
 
     status: field({ type: String, label: 'Status' }),
     productId: field({ type: String, index: true }),
-    count: field({ type: Number, label: 'Count' }),
+    count: field({ type: Number, default: 0, label: 'Count' }),
+    cost: field({ type: Number, default: 0, label: 'Cost' }),
 
     modifiedAt: field({
       type: Date,

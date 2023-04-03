@@ -5,6 +5,7 @@ export const types = `
     departmentId: String
     productId: String
     count: Float
+    cost: Float
     uomId: String
     modifiedAt: Date
   }
@@ -12,6 +13,7 @@ export const types = `
   type RemainderCount {
     _id: String
     remainder: Float
+    cost: Float
     uomId: String
     uom: JSON
   }
@@ -26,6 +28,7 @@ export const types = `
     category: ProductCategory
     categoryId: String
     remainder: Float
+    cost: Float
     unitPrice: Float
     createdAt: Date
   }

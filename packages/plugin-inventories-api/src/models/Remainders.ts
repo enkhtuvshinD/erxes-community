@@ -257,7 +257,12 @@ export const loadRemainderClass = (models: IModels) => {
       subdomain: string,
       branchId: string,
       departmentId: string,
-      productsData: { productId: string; uomId: string; diffCount: number }[]
+      productsData: {
+        productId: string;
+        uomId: string;
+        diffCount: number;
+        diffCost: number;
+      }[]
     ) {
       let bulkOps: {
         updateOne: {
@@ -289,7 +294,30 @@ export const loadRemainderClass = (models: IModels) => {
           updateOne: {
             filter: { productId: data.productId, branchId, departmentId },
             update: {
-              $inc: { count: data.diffCount / (ratio || 1) },
+              $inc: {
+                count: data.diffCount / (ratio || 1),
+                cost:
+                  data.diffCount < 0
+                    ? {
+                        $multiple: [
+                          {
+                            $cond: [
+                              {
+                                $and: [
+                                  { $isNumber: 'cost' },
+                                  { cost: { $ne: 0 } }
+                                ]
+                              },
+                              { $divide: ['cost', 'count'] },
+                              0
+                            ]
+                          },
+                          data.diffCount,
+                          -1
+                        ]
+                      }
+                    : data.diffCost || 0
+              },
               $set: { productId: data.productId, branchId, departmentId }
             },
             upsert: true
