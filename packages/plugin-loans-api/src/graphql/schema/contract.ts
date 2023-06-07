@@ -40,6 +40,7 @@ export const types = () => `
     unduePercent: Float
     undueCalcType: String
     interestRate: Float
+    skipInterestCalcMonth: Float
     repayment: String
     startDate: Date
     scheduleDays: [Float]
@@ -187,6 +188,7 @@ const commonFields = `
   useHoliday: Boolean
   relContractId: String
   dealId: String
+  skipInterestCalcMonth: Float
 `;
 
 export const mutations = `
