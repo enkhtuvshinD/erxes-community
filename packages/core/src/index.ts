@@ -326,7 +326,7 @@ httpServer.listen(PORT, async () => {
     apolloServer.applyMiddleware({ app, path: '/graphql', cors: corsOptions });
   });
 
-  initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis }).catch(e => {
+  initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis, app }).catch(e => {
     debugError(`Error ocurred during message broker init ${e.message}`);
   });
 

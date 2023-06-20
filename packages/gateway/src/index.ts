@@ -128,18 +128,18 @@ const stopRouter = () => {
 
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
-  // this has to be applied last, just like 404 route handlers are applied last
-  applyProxyToCore(app, targets);
-
   const port = PORT || 4000;
 
   await new Promise<void>(resolve => httpServer.listen({ port }, resolve));
 
-  await initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis });
+  await initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis, app });
 
   await setBeforeResolvers();
   await setAfterMutations();
   await setAfterQueries();
+
+  // this has to be applied last, just like 404 route handlers are applied last
+  applyProxyToCore(app, targets);
 
   console.log(`Erxes gateway ready at http://localhost:${port}/graphql`);
 })();

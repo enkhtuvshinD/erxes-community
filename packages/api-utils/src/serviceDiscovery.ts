@@ -111,3 +111,7 @@ export const clearCache = async () => {
   console.log('Clearing enabled services cache ........');
   await redis.del(REDIS_ENABLED_SERVICES_KEY);
 };
+
+export const getPluginAddress = async name => {
+  return redis.get(`service:${name}`);
+};

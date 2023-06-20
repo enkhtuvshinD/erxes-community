@@ -1,6 +1,12 @@
 import * as amqplib from 'amqplib';
 import { v4 as uuid } from 'uuid';
 import { debugError, debugInfo } from './debuggers';
+import { getPluginAddress } from './serviceDiscovery';
+import { Express } from 'express';
+import fetch from 'node-fetch';
+
+const AbortController =
+  globalThis.AbortController || require('abort-controller');
 
 const showInfoDebug = () => {
   if ((process.env.DEBUG || '').includes('error')) {
@@ -88,61 +94,120 @@ export const consumeQueue = async (queueName, callback) => {
   }
 };
 
-export const consumeRPCQueue = async (queueName, callback) => {
-  queueName = queueName.concat(queuePrefix);
+export const createConsumeRPCQueue = (app: Express) => (
+  queueName,
+  procedure
+) => {
+  const [_pluginName, procedureName] = queueName.split(':');
 
-  debugInfo(`consumeRPCQueue ${queueName}`);
+  app.post(`/rpc/${procedureName}`, async (req, res) => {
+    showInfoDebug() &&
+      debugInfo(
+        `Received RPC ${procedureName}. Arguments: ${JSON.stringify(req.body)}`
+      );
 
-  await checkQueueName(queueName);
-
-  try {
-    await channel.assertQueue(queueName);
-
-    // TODO: learn more about this
-    // await channel.prefetch(10);
-
-    channel.consume(queueName, async msg => {
-      if (msg !== null) {
-        if (showInfoDebug()) {
-          debugInfo(
-            `Received rpc ${queueName} queue message ${msg.content.toString()}`
-          );
-        }
-
-        let response;
-
-        try {
-          response = await callback(JSON.parse(msg.content.toString()));
-        } catch (e) {
-          debugError(
-            `Error occurred during callback ${queueName} ${e.message}`
-          );
-
-          response = {
-            status: 'error',
-            errorMessage: e.message
-          };
-        }
-
-        channel.sendToQueue(
-          msg.properties.replyTo,
-          Buffer.from(JSON.stringify(response)),
-          {
-            correlationId: msg.properties.correlationId
-          }
-        );
-
-        channel.ack(msg);
-      }
-    });
-  } catch (e) {
-    debugError(
-      `Error occurred during consume rpc queue ${queueName} ${e.message}`
-    );
-  }
+    try {
+      const response = await procedure(req.body);
+      res.json(response);
+    } catch (e) {
+      debugError(
+        `Error occurred during remote procedure ${procedureName}. ${e.message}`
+      );
+      res.json({
+        status: 'error',
+        errorMessage: e.message
+      });
+    }
+  });
 };
 
 export const sendRPCMessage = async (
+  queueName: string,
+  args: any
+): Promise<any> => {
+  const [pluginName, procedureName] = queueName.split(':');
+
+  showInfoDebug() &&
+    debugInfo(`RPC: Calling ${procedureName} of plugin ${pluginName}.`);
+
+  const address = await getPluginAddress(pluginName);
+
+  if (!address) {
+    throw new Error(
+      `Plugin ${pluginName} has no address value in service discovery`
+    );
+  }
+
+  const timeoutMs = args.timeout || process.env.RPC_TIMEOUT || 10000;
+
+  const abortController = new AbortController();
+  let timeout: NodeJS.Timeout | null = setTimeout(
+    abortController.abort,
+    timeoutMs
+  );
+
+  const cancelTimeout = () => {
+    if (timeout != null) {
+      clearTimeout(timeout);
+    }
+    timeout = null;
+  };
+
+  try {
+    const response = await fetch(`${address}/rpc/${procedureName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(args),
+      signal: abortController.signal
+    });
+
+    if (!(200 <= response.status && response.status < 300)) {
+      throw new Error(
+        `RPC HTTP error: Status code ${response.status}. Remote plugin: ${pluginName}. Procedure: ${procedureName}`
+      );
+    }
+
+    const result = await response.json();
+
+    cancelTimeout();
+
+    if (result.status === 'success') {
+      showInfoDebug() &&
+        debugInfo(
+          `RPC success. Remote: ${pluginName}. Procedure: ${procedureName}. Result: ${JSON.stringify(
+            result
+          )}`
+        );
+
+      return result.data;
+    } else {
+      showInfoDebug() &&
+        debugInfo(
+          `RPC error. Remote: ${pluginName}. Procedure: ${procedureName}. Error message: ${result.errorMessage})}`
+        );
+
+      throw new Error(result.errorMessage);
+    }
+  } catch (e) {
+    cancelTimeout();
+
+    if (e.name === 'AbortError') {
+      const errorMessage = `RPC HTTP error. Remote: ${pluginName}. Procedure: ${procedureName}. Timed out after ${timeoutMs}ms.`;
+      debugError(errorMessage);
+      if (args?.defaultValue) {
+        return args.defaultValue;
+      } else {
+        throw new Error(errorMessage);
+      }
+    }
+
+    throw e;
+  }
+};
+
+export const sendRPCMessageMq = async (
   queueName: string,
   message: any
 ): Promise<any> => {
@@ -221,6 +286,60 @@ export const sendRPCMessage = async (
   return response;
 };
 
+export const consumeRPCQueueMq = async (queueName, callback) => {
+  queueName = queueName.concat(queuePrefix);
+
+  debugInfo(`consumeRPCQueue ${queueName}`);
+
+  await checkQueueName(queueName);
+
+  try {
+    await channel.assertQueue(queueName);
+
+    // TODO: learn more about this
+    // await channel.prefetch(10);
+
+    channel.consume(queueName, async msg => {
+      if (msg !== null) {
+        if (showInfoDebug()) {
+          debugInfo(
+            `Received rpc ${queueName} queue message ${msg.content.toString()}`
+          );
+        }
+
+        let response;
+
+        try {
+          response = await callback(JSON.parse(msg.content.toString()));
+        } catch (e) {
+          debugError(
+            `Error occurred during callback ${queueName} ${e.message}`
+          );
+
+          response = {
+            status: 'error',
+            errorMessage: e.message
+          };
+        }
+
+        channel.sendToQueue(
+          msg.properties.replyTo,
+          Buffer.from(JSON.stringify(response)),
+          {
+            correlationId: msg.properties.correlationId
+          }
+        );
+
+        channel.ack(msg);
+      }
+    });
+  } catch (e) {
+    debugError(
+      `Error occurred during consume rpc queue ${queueName} ${e.message}`
+    );
+  }
+};
+
 export const sendMessage = async (queueName: string, data?: any) => {
   queueName = queueName.concat(queuePrefix);
 
@@ -289,7 +408,12 @@ RabbitListener.prototype.reconnect = function(RABBITMQ_HOST) {
   }, reconnectTimeout);
 };
 
-export const init = async ({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis }) => {
+export const init = async ({
+  RABBITMQ_HOST,
+  MESSAGE_BROKER_PREFIX,
+  redis,
+  app
+}) => {
   redisClient = redis;
 
   const listener = new RabbitListener();
@@ -299,8 +423,10 @@ export const init = async ({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis }) => {
 
   return {
     consumeQueue,
-    consumeRPCQueue,
+    consumeRPCQueue: await createConsumeRPCQueue(app),
     sendMessage,
-    sendRPCMessage
+    sendRPCMessage,
+    consumeRPCQueueMq,
+    sendRPCMessageMq
   };
 };
