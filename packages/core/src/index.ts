@@ -33,6 +33,7 @@ import { uploader } from './middlewares/fileMiddleware';
 import {
   getService,
   getServices,
+  isEnabled,
   join,
   leave,
   redis
@@ -49,6 +50,7 @@ import imports from './imports';
 import exporter from './exporter';
 import { moduleObjects } from './data/permissions/actions/permission';
 import dashboards from './dashboards';
+import { getEnabledServices } from '@erxes/api-utils/src/serviceDiscovery';
 
 const {
   JWT_TOKEN_SECRET,
@@ -308,6 +310,16 @@ app.get('/get-import-file', async (req, res) => {
   const fileName = headers[index];
 
   res.sendFile(`${uploadsFolderPath}/${fileName}`);
+});
+
+app.get('/plugins/enabled/:name', async (req, res) => {
+  const result = await isEnabled(req.params.name);
+  res.json(result);
+});
+
+app.get('/plugins/enabled', async (_req, res) => {
+  const result = (await getEnabledServices()) || [];
+  res.json(result);
 });
 
 // The error handler must be before any other error middleware and after all controllers
