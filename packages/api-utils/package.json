@@ -27,6 +27,7 @@
     "graphql-subscriptions": "^1.1.0",
     "ioredis": "^4.28.2",
     "lodash": "^4.17.21",
+    "node-fetch": "^2.6.7",
     "meteor-random": "^0.0.3",
     "moment": "^2.18.1",
     "mongoose": "5.7.5",

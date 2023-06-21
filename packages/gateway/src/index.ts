@@ -16,7 +16,10 @@ import {
 import { initBroker } from './messageBroker';
 import * as cors from 'cors';
 import { retryGetProxyTargets, ErxesProxyTarget } from './proxy/targets';
-import createErxesProxyMiddleware from './proxy/create-middleware';
+import {
+  applyProxiesCoreless,
+  applyProxyToCore
+} from './proxy/create-middleware';
 import apolloRouter from './apollo-router';
 import { ChildProcess } from 'child_process';
 import { startSubscriptionServer } from './subscription';
@@ -94,7 +97,7 @@ const stopRouter = () => {
   const targets: ErxesProxyTarget[] = await retryGetProxyTargets();
   await apolloRouter(targets);
 
-  app.use(createErxesProxyMiddleware(targets));
+  applyProxiesCoreless(app, targets);
 
   // for health check
   app.get('/health', async (_req, res) => {
@@ -129,11 +132,14 @@ const stopRouter = () => {
 
   await new Promise<void>(resolve => httpServer.listen({ port }, resolve));
 
-  await initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis });
+  await initBroker({ RABBITMQ_HOST, MESSAGE_BROKER_PREFIX, redis, app });
 
   await setBeforeResolvers();
   await setAfterMutations();
   await setAfterQueries();
+
+  // this has to be applied last, just like 404 route handlers are applied last
+  applyProxyToCore(app, targets);
 
   console.log(`Erxes gateway ready at http://localhost:${port}/graphql`);
 })();
