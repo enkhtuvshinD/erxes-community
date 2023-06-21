@@ -94,13 +94,27 @@ export const consumeQueue = async (queueName, callback) => {
   }
 };
 
+function splitPluginProcedureName(queueName: string) {
+  const separatorIndex = queueName.indexOf(':');
+
+  const pluginName = queueName.slice(0, separatorIndex);
+  const procedureName = queueName.slice(separatorIndex + 1);
+
+  return { pluginName, procedureName };
+}
+
 export const createConsumeRPCQueue = (app: Express) => (
   queueName,
   procedure
 ) => {
-  const [_pluginName, procedureName] = queueName.split(':');
+  const { pluginName, procedureName } = splitPluginProcedureName(queueName);
 
-  app.post(`/rpc/${procedureName}`, async (req, res) => {
+  const endpoint = `/rpc/${procedureName}`;
+
+  showInfoDebug() &&
+    debugInfo(`Plugin: ${pluginName}. Creating RPC endpoint ${endpoint}`);
+
+  app.post(endpoint, async (req, res) => {
     showInfoDebug() &&
       debugInfo(
         `Received RPC ${procedureName}. Arguments: ${JSON.stringify(req.body)}`
@@ -125,7 +139,7 @@ export const sendRPCMessage = async (
   queueName: string,
   args: any
 ): Promise<any> => {
-  const [pluginName, procedureName] = queueName.split(':');
+  const { pluginName, procedureName } = splitPluginProcedureName(queueName);
 
   showInfoDebug() &&
     debugInfo(`RPC: Calling ${procedureName} of plugin ${pluginName}.`);
