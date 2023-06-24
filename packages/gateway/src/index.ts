@@ -24,7 +24,7 @@ import apolloRouter from './apollo-router';
 import { ChildProcess } from 'child_process';
 import { startSubscriptionServer } from './subscription';
 import { Disposable } from 'graphql-ws';
-import { clearCache } from '@erxes/api-utils/src/serviceDiscovery';
+import { publishRefreshEnabledServices } from '@erxes/api-utils/src/serviceDiscovery';
 
 const {
   NODE_ENV,
@@ -49,8 +49,6 @@ const stopRouter = () => {
 };
 
 (async () => {
-  await clearCache();
-
   const app = express();
 
   if (SENTRY_DSN) {
@@ -95,6 +93,9 @@ const stopRouter = () => {
   app.use(cors(corsOptions));
 
   const targets: ErxesProxyTarget[] = await retryGetProxyTargets();
+
+  await publishRefreshEnabledServices();
+
   await apolloRouter(targets);
 
   applyProxiesCoreless(app, targets);
@@ -147,7 +148,7 @@ const stopRouter = () => {
 (['SIGINT', 'SIGTERM'] as NodeJS.Signals[]).forEach(sig => {
   process.on(sig, async () => {
     if (NODE_ENV === 'development') {
-      clearCache();
+      publishRefreshEnabledServices();
     }
     if (subscriptionServer) {
       try {
