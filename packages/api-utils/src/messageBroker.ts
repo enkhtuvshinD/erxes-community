@@ -9,7 +9,7 @@ import * as Agent from 'agentkeepalive';
 
 const httpAgentOptions = {
   timeout: 2_147_483_646,
-  keepAliveMsecs: 1000
+  keepAliveMsecs: 300
 };
 
 const keepaliveAgent = new Agent(httpAgentOptions);

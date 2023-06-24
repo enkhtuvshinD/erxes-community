@@ -107,9 +107,9 @@ export const leave = async (name, _port) => {
   console.log(`$service:${name} left`);
 };
 
-export const isEnabled = async name => {
+export const isEnabled = name => {
   if (name === 'core') return true;
-  await ensureCache();
+  ensureCache();
   return enabledServicesCache.includes(name);
 };
 
