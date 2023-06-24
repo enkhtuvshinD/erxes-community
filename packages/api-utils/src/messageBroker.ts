@@ -4,11 +4,14 @@ import { debugError, debugInfo } from './debuggers';
 import { getPluginAddress } from './serviceDiscovery';
 import { Express } from 'express';
 import fetch from 'node-fetch';
-import AbortController from 'abort-controller';
 import * as Agent from 'agentkeepalive';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+const timeoutMs = Number(process.env.RPC_TIMEOUT) || 10000;
 
 const httpAgentOptions = {
-  timeout: 2_147_483_646,
+  timeout: timeoutMs,
   keepAliveMsecs: 1000
 };
 
@@ -114,26 +117,15 @@ export const createConsumeRPCQueue = (app: Express) => (
   queueName,
   procedure
 ) => {
-  const { pluginName, procedureName } = splitPluginProcedureName(queueName);
+  const { procedureName } = splitPluginProcedureName(queueName);
 
   const endpoint = `/rpc/${procedureName}`;
 
-  showInfoDebug() &&
-    debugInfo(`Plugin: ${pluginName}. Creating RPC endpoint ${endpoint}`);
-
   app.post(endpoint, async (req, res) => {
-    showInfoDebug() &&
-      debugInfo(
-        `Received RPC ${procedureName}. Arguments: ${JSON.stringify(req.body)}`
-      );
-
     try {
       const response = await procedure(req.body);
       res.json(response);
     } catch (e) {
-      debugError(
-        `Error occurred during remote procedure ${procedureName}. ${e.message}`
-      );
       res.json({
         status: 'error',
         errorMessage: e.message
@@ -147,10 +139,6 @@ export const sendRPCMessage = async (
   args: any
 ): Promise<any> => {
   const { pluginName, procedureName } = splitPluginProcedureName(queueName);
-
-  showInfoDebug() &&
-    debugInfo(`RPC: Calling ${procedureName} of plugin ${pluginName}.`);
-
   const address = await getPluginAddress(pluginName);
 
   if (!address) {
@@ -159,21 +147,6 @@ export const sendRPCMessage = async (
     );
   }
 
-  const timeoutMs = args.timeout || process.env.RPC_TIMEOUT || 10000;
-
-  const abortController = new AbortController();
-  let timeout: NodeJS.Timeout | null = setTimeout(
-    abortController.abort,
-    timeoutMs
-  );
-
-  const cancelTimeout = () => {
-    if (timeout != null) {
-      clearTimeout(timeout);
-    }
-    timeout = null;
-  };
-
   try {
     const response = await fetch(`${address}/rpc/${procedureName}`, {
       method: 'POST',
@@ -181,8 +154,8 @@ export const sendRPCMessage = async (
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(args),
-      signal: abortController.signal,
-      agent: keepaliveAgent
+      agent: keepaliveAgent,
+      compress: false
     });
 
     if (!(200 <= response.status && response.status < 300)) {
@@ -193,35 +166,19 @@ export const sendRPCMessage = async (
 
     const result = await response.json();
 
-    cancelTimeout();
-
     if (result.status === 'success') {
-      showInfoDebug() &&
-        debugInfo(
-          `RPC success. Remote: ${pluginName}. Procedure: ${procedureName}. Result: ${JSON.stringify(
-            result
-          )}`
-        );
-
       return result.data;
     } else {
-      showInfoDebug() &&
-        debugInfo(
-          `RPC error. Remote: ${pluginName}. Procedure: ${procedureName}. Error message: ${result.errorMessage})}`
-        );
-
       throw new Error(result.errorMessage);
     }
   } catch (e) {
-    cancelTimeout();
-
-    if (e.name === 'AbortError') {
-      const errorMessage = `RPC HTTP error. Remote: ${pluginName}. Procedure: ${procedureName}. Timed out after ${timeoutMs}ms.`;
-      debugError(errorMessage);
+    if (e.code === 'ERR_SOCKET_TIMEOUT') {
       if (args?.defaultValue) {
         return args.defaultValue;
       } else {
-        throw new Error(errorMessage);
+        throw new Error(
+          `RPC HTTP error. Remote: ${pluginName}. Procedure: ${procedureName}. Timed out after ${timeoutMs}ms.`
+        );
       }
     }
 
