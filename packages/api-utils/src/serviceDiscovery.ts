@@ -112,8 +112,13 @@ export const clearCache = async () => {
   await redis.del(REDIS_ENABLED_SERVICES_KEY);
 };
 
+const pluginAddressCache = {};
+
 export const getPluginAddress = async name => {
-  return redis.get(`service:${name}`);
+  if (!pluginAddressCache[name]) {
+    pluginAddressCache[name] = await redis.get(`service:${name}`);
+  }
+  return pluginAddressCache[name];
 };
 
 export const getEnabledServices = async () => {
