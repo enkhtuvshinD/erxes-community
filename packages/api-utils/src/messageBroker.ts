@@ -4,15 +4,16 @@ import { debugError, debugInfo } from './debuggers';
 import { getPluginAddress } from './serviceDiscovery';
 import { Express } from 'express';
 import fetch from 'node-fetch';
+import AbortController from 'abort-controller';
+import * as Agent from 'agentkeepalive';
 
-let AbortControllerImported: any = null;
+const httpAgentOptions = {
+  timeout: Number.MAX_SAFE_INTEGER - 1000,
+  keepAliveMsecs: 1000
+};
 
-async function createAbortController() {
-  if (!AbortControllerImported) {
-    AbortControllerImported = await import('abort-controller');
-  }
-  return new AbortControllerImported();
-}
+const keepaliveAgent = new Agent(httpAgentOptions);
+// const secureKeepaliveAgent = new Agent.HttpsAgent(httpAgentOptions);
 
 const showInfoDebug = () => {
   if ((process.env.DEBUG || '').includes('error')) {
@@ -160,7 +161,7 @@ export const sendRPCMessage = async (
 
   const timeoutMs = args.timeout || process.env.RPC_TIMEOUT || 10000;
 
-  const abortController = await createAbortController();
+  const abortController = new AbortController();
   let timeout: NodeJS.Timeout | null = setTimeout(
     abortController.abort,
     timeoutMs
@@ -180,7 +181,8 @@ export const sendRPCMessage = async (
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(args),
-      signal: abortController.signal
+      signal: abortController.signal,
+      agent: keepaliveAgent
     });
 
     if (!(200 <= response.status && response.status < 300)) {
