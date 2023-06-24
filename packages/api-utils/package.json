@@ -17,6 +17,7 @@
     "babel-preset-gatsby-package": "^0.5.2"
   },
   "dependencies": {
+    "abort-controller" : "^3.0.0",
     "amqplib": "^0.10.2",
     "crypto": "^1.0.1",
     "debug": "^4.1.1",
