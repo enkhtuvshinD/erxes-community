@@ -5,8 +5,14 @@ import { getPluginAddress } from './serviceDiscovery';
 import { Express } from 'express';
 import fetch from 'node-fetch';
 
-const AbortController =
-  globalThis.AbortController || require('abort-controller');
+let AbortControllerImported: any = null;
+
+async function createAbortController() {
+  if (!AbortControllerImported) {
+    AbortControllerImported = await import('abort-controller');
+  }
+  return new AbortControllerImported();
+}
 
 const showInfoDebug = () => {
   if ((process.env.DEBUG || '').includes('error')) {
@@ -154,7 +160,7 @@ export const sendRPCMessage = async (
 
   const timeoutMs = args.timeout || process.env.RPC_TIMEOUT || 10000;
 
-  const abortController = new AbortController();
+  const abortController = await createAbortController();
   let timeout: NodeJS.Timeout | null = setTimeout(
     abortController.abort,
     timeoutMs
