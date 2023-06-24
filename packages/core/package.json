@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "abort-controller" : "^3.0.0",
+    "agentkeepalive": "^4.3.0",
     "apollo-server-core": "^3.6.1",
     "apollo-server-express": "^3.6.1",
     "apollo-datasource-rest": "^0.5.1",
