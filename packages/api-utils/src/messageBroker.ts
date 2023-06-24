@@ -8,7 +8,7 @@ import AbortController from 'abort-controller';
 import * as Agent from 'agentkeepalive';
 
 const httpAgentOptions = {
-  timeout: Number.MAX_SAFE_INTEGER - 1000,
+  timeout: 2_147_483_646,
   keepAliveMsecs: 1000
 };
 
