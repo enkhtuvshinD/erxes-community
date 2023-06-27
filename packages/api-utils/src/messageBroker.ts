@@ -9,6 +9,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const timeoutMs = Number(process.env.RPC_TIMEOUT) || 10000;
+const { ENABLE_MQ_RPC } = process.env;
 
 const httpAgentOptions = {
   timeout: timeoutMs,
@@ -132,6 +133,10 @@ export const createConsumeRPCQueue = (app: Express) => (
       });
     }
   });
+
+  if (ENABLE_MQ_RPC) {
+    consumeRPCQueueMq(queueName, procedure);
+  }
 };
 
 export const sendRPCMessage = async (
