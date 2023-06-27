@@ -17,7 +17,7 @@ const httpAgentOptions = {
 };
 
 const keepaliveAgent = new Agent(httpAgentOptions);
-// const secureKeepaliveAgent = new Agent.HttpsAgent(httpAgentOptions);
+const secureKeepaliveAgent = new Agent.HttpsAgent(httpAgentOptions);
 
 const showInfoDebug = () => {
   if ((process.env.DEBUG || '').includes('error')) {
@@ -152,43 +152,71 @@ export const sendRPCMessage = async (
     );
   }
 
-  try {
-    const response = await fetch(`${address}/rpc/${procedureName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(args),
-      agent: keepaliveAgent,
-      compress: false
-    });
+  const getData = async () => {
+    try {
+      const response = await fetch(`${address}/rpc/${procedureName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(args),
+        agent: parsedURL =>
+          parsedURL.protocol === 'http:'
+            ? keepaliveAgent
+            : secureKeepaliveAgent,
+        compress: false
+      });
 
-    if (!(200 <= response.status && response.status < 300)) {
-      throw new Error(
-        `RPC HTTP error: Status code ${response.status}. Remote plugin: ${pluginName}. Procedure: ${procedureName}`
-      );
-    }
-
-    const result = await response.json();
-
-    if (result.status === 'success') {
-      return result.data;
-    } else {
-      throw new Error(result.errorMessage);
-    }
-  } catch (e) {
-    if (e.code === 'ERR_SOCKET_TIMEOUT') {
-      if (args?.defaultValue) {
-        return args.defaultValue;
-      } else {
+      if (!(200 <= response.status && response.status < 300)) {
         throw new Error(
-          `RPC HTTP error. Remote: ${pluginName}. Procedure: ${procedureName}. Timed out after ${timeoutMs}ms.`
+          `RPC HTTP error: Status code ${response.status}. Remote plugin: ${pluginName}. Procedure: ${procedureName}`
         );
       }
-    }
 
-    throw e;
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        return result.data;
+      } else {
+        throw new Error(result.errorMessage);
+      }
+    } catch (e) {
+      if (e.code === 'ERR_SOCKET_TIMEOUT') {
+        if (args?.defaultValue) {
+          return args.defaultValue;
+        } else {
+          throw new Error(
+            `RPC HTTP error. Remote: ${pluginName}. Procedure: ${procedureName}. Timed out after ${timeoutMs}ms.`
+          );
+        }
+      }
+
+      throw e;
+    }
+  };
+
+  let lastError = null;
+  let maxTries = 3;
+  for (let tryIdx = 0; tryIdx < maxTries; tryIdx++) {
+    try {
+      const data = await getData();
+      return data;
+    } catch (e) {
+      lastError = e;
+      if (
+        e.code &&
+        ['ECONNREFUSED', 'ECONNRESET', 'ERR_STREAM_PREMATURE_CLOSE'].includes(
+          e.code
+        )
+      ) {
+        const lastTry = tryIdx >= maxTries - 1;
+        !lastTry && (await new Promise(resolve => setTimeout(resolve, 3000)));
+      } else {
+        throw e;
+      }
+    }
   }
+  if (lastError) throw lastError;
 };
 
 export const sendRPCMessageMq = async (
